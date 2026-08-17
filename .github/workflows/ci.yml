@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package-smoke-test:
+    name: Package smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+
+      - name: Import host entry
+        run: npm test
+
+      - name: Check client syntax
+        run: node --check client/client.js
+
+      - name: Inspect npm package contents
+        run: npm pack --dry-run --json > pack-result.json
+
+      - name: Verify required runtime files
+        run: >-
+          node --input-type=module -e "import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('pack-result.json', 'utf8'))[0];
+          const files = new Set(report.files.map((entry) => entry.path));
+          for (const required of ['src/index.js', 'client/client.js', 'cordis.patch.yml', 'README.md', 'README_EN.md']) {
+            if (!files.has(required)) throw new Error('Missing package file: ' + required);
+          }
+          console.log('package contents ok');"
+
+      - name: Test npm publication lifecycle
+        run: npm publish --dry-run --access public

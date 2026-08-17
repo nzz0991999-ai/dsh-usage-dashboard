@@ -41,35 +41,119 @@ A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/d
 - **Traffic goes only to official DeepSeek domains**: the token is used solely for **read-only** queries against three undocumented usage endpoints on `platform.deepseek.com`, plus the official `api.deepseek.com/user/balance`. The plugin contains no telemetry, analytics, or third-party forwarding.
 - **Local storage**: the token is stored in `$DSH_HOME/storages/dsh-usage-dashboard.secret` (mode 0600, readable only by the host process). The browser only ever receives the masked value (`abcd****wxyz`); the plaintext token is never sent to the page. You can also use the `DEEPSEEK_PLATFORM_TOKEN` environment variable instead.
 - **This repository and its code contain no credentials**; the plugin never prints, logs, or uploads the token.
+- **Sanitize installation records before sharing them**: never run or share commands that print the complete `.credentials.yaml`, environment, or token values. Before sending logs or a session archive, search for and remove `sk-`, `userToken`, `DEEPSEEK_API_KEY`, and `DEEPSEEK_PLATFORM_TOKEN`. Delete unneeded diagnostic snapshots such as `$DSH_HOME/logs/dsh-web-env-snapshot.json`.
 - **Undocumented endpoint risk**: `/api/v0/usage/*` are internal platform endpoints with no SLA; they may change without notice (this never affects Harness itself, and failures keep the last good data).
 - **How to remove**: panel ⚙️ settings → "Clear saved token", or delete `~/.dsh/storages/dsh-usage-dashboard.secret`.
 - By using this plugin you acknowledge the risks above and assume them yourself. See [SECURITY.md](./SECURITY.md) for details.
 
 ## Installation
 
-### Option 1: clone from GitHub (recommended)
+### Prerequisites
+
+- Node.js `18` or newer
+- A working DeepSeek Harness installation
+- `pnpm` available (the plugin installer invokes it)
+
+Check first:
 
 ```sh
-git clone https://github.com/nzz0991999-ai/dsh-usage-dashboard
-dsh plugin --profile web add ./dsh-usage-dashboard
+node --version
+pnpm --version
 ```
 
-### Option 2: local source
+If the second command is not found, install the pinned version:
 
 ```sh
-dsh plugin --profile web add <absolute path to this directory>
+npm install --global pnpm@10.15.0
 ```
 
-Restart `dsh web` afterwards and refresh the page — the balance pill appears in the bottom-right corner.
+### Option 1: pinned npm package (recommended)
+
+No repository clone is required:
+
+```sh
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+```
+
+The explicit `1.0.1` keeps the installation reproducible when later versions are released.
+
+### Option 2: GitHub Release `.tgz` (when npm is unavailable)
+
+```sh
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.1/deepseek-harness-usage-dashboard-1.0.1.tgz
+```
+
+You may also download the `.tgz` manually from the [v1.0.1 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.1), then install the local file. Windows example:
+
+```powershell
+dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.0.1.tgz"
+```
+
+### Option 3: pinned local source (developers)
+
+```sh
+git clone --branch v1.0.1 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
+```
+
+On Windows PowerShell, use an absolute `file:` path with forward slashes:
+
+```powershell
+dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
+```
+
+> Do not pass a plain directory path. On Windows, it may become a `link:` dependency and omit `@deepseek-ai/schemastery`. A `file:` path, npm package, or Release `.tgz` avoids that issue.
+
+After installation, return to the **same workspace directory** from which you normally start Harness, restart `dsh web`, and refresh the page. The bottom-right balance pill confirms success. Starting from another directory may select a different Harness workspace or fail because port `3080` is already in use.
 
 ### Configure DeepSeek Platform userToken
 
-1. Sign in to <https://platform.deepseek.com> in your browser
-2. DevTools (F12) → Application → Local Storage → select `platform.deepseek.com`
-3. Copy the value of the `userToken` key
-4. Back in Harness, open the bottom-right dashboard → ⚙️ settings → paste → "Verify & save"
+`DEEPSEEK_API_KEY` and `userToken` are different credentials. The API key serves the official balance endpoint; the platform sign-in `userToken` serves daily/monthly usage and actual billed-spend endpoints. `platform.deepseek.com` and `api.deepseek.com` are DeepSeek's official shared domains, not relays operated by this plugin.
 
-(Alternatively, `export DEEPSEEK_PLATFORM_TOKEN=...` before starting `dsh web`.)
+1. Sign in to <https://platform.deepseek.com> with Chrome or Edge and keep the page signed in.
+2. Press `F12` → **Application** → **Local Storage** → `https://platform.deepseek.com`.
+3. Search for `userToken` and copy only its **Value**, without the key name, quotes, or surrounding whitespace. If it is missing, refresh or sign in again and recheck.
+4. In Harness, open the bottom-right dashboard → ⚙️ settings → paste → "Verify & save". Only a masked value is shown after saving.
+
+Never paste a `userToken` into a terminal, chat, Issue, screenshot, or installation log. Advanced users may set `DEEPSEEK_PLATFORM_TOKEN` before starting Harness, but shell history can retain plaintext, so the dashboard form is safer.
+
+## Installation troubleshooting
+
+### `EADDRINUSE: address already in use 127.0.0.1:3080`
+
+This normally means that another `dsh web` is already running; it is not a plugin, API-key, or `userToken` failure. If the existing page opens, use and refresh it instead of starting a duplicate server.
+
+In Windows PowerShell, identify the listener first:
+
+```powershell
+$dshPid = Get-NetTCPConnection -LocalPort 3080 -State Listen |
+  Select-Object -First 1 -ExpandProperty OwningProcess
+Get-CimInstance Win32_Process -Filter "ProcessId=$dshPid" |
+  Select-Object ProcessId, CommandLine
+```
+
+Only after confirming it is the old `dsh web` process, stop it and restart from the correct workspace:
+
+```powershell
+taskkill /PID $dshPid /T /F
+Set-Location "F:/path/to/your/harness-workspace"
+dsh web
+```
+
+On macOS/Linux, use `lsof -nP -iTCP:3080 -sTCP:LISTEN`, confirm the process, run `kill <PID>`, and start again from the original workspace.
+
+### `ERR_MODULE_NOT_FOUND: @deepseek-ai/schemastery`
+
+A local directory installed as a `link:` dependency may omit dependencies. Remove the old plugin and reinstall from npm, the Release `.tgz`, or an absolute `file:` path:
+
+```sh
+dsh plugin --profile web remove dsh-usage-dashboard
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+```
+
+### No balance pill after installation
+
+Confirm both installation and restart use the `web` profile and start Harness from the original workspace, then hard-refresh the browser page. If an old `dsh web` process is still running, identify and restart it using the port steps above.
 
 ## Configuration overrides
 
@@ -89,7 +173,7 @@ Write into `$DSH_HOME/profiles/web/cordis.patch.yml`:
 ## Uninstall
 
 ```sh
-dsh plugin --profile web remove dsh-usage-dashboard
+dsh plugin --profile web remove deepseek-harness-usage-dashboard
 ```
 
-(If you no longer need it, also delete `$DSH_HOME/storages/dsh-usage-dashboard.secret`.)
+For `1.0.0` or older installations that used the old package name, run `dsh plugin --profile web remove dsh-usage-dashboard` instead. If you no longer need it, also delete `$DSH_HOME/storages/dsh-usage-dashboard.secret`.

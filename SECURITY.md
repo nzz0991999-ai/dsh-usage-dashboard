@@ -16,8 +16,16 @@
 - 网络请求只发往 `api.deepseek.com` 与 `platform.deepseek.com` 两个官方域名,均为只读查询;插件不含遥测、统计上报或任何第三方转发。
 - 浏览器端只能获得脱敏后的 token 显示值(`abcd****wxyz`),明文 token 不会下发到页面。
 
+## 日志与安装记录
+
+- 不要运行或分享会完整打印 `$DSH_HOME/.credentials.yaml`、进程环境或 token 值的诊断命令。排查凭据时只输出字段名或脱敏指纹。
+- 分享日志、截图或会话压缩包前,搜索并移除 `sk-`、`userToken`、`DEEPSEEK_API_KEY`、`DEEPSEEK_PLATFORM_TOKEN` 及 Authorization/Bearer 请求头。
+- 安装工具生成的环境快照也可能含有敏感信息。调试完成后,检查并删除不再需要的文件,例如 `$DSH_HOME/logs/dsh-web-env-snapshot.json`。
+- 一旦凭据可能被记录或分享,请先在 DeepSeek 平台轮换/删除凭据,再处理已保存的日志或压缩包。
+
 ## 报告漏洞
 
 - 一般问题:直接开 [GitHub Issue](https://github.com/nzz0991999-ai/dsh-usage-dashboard/issues)。
 - 涉及敏感信息(疑似泄露、可复现的越权等):**不要**公开细节,开一个 Issue 说明"需要私下沟通"即可,我们会联系你。
 - 如果你怀疑自己的 `userToken` 已泄露,请立即在 platform.deepseek.com 重新登录以轮换登录态,使旧 token 失效。
+- 如果你怀疑 API Key 已泄露,请立即在 DeepSeek 平台删除并重新创建 Key。

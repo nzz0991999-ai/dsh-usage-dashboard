@@ -4,6 +4,25 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 格式,版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.0.1] - 2026-08-18
+
+### 变更
+
+- npm 包改名为未占用的 `deepseek-harness-usage-dashboard`,插件运行时 ID 继续使用 `dsh-usage-dashboard`
+- 移除未使用的 `zod`,并固定 `@deepseek-ai/schemastery` 依赖版本
+- npm 发布包补充中英文 README、Security、Changelog 与 License 文件
+
+### 安装与文档
+
+- npm 固定版本安装成为首选方式,同时提供 GitHub Release `.tgz` 备用路径
+- 补充 Node.js/pnpm 前置条件、Windows `file:` 本地安装方式和同一工作目录重启说明
+- 补充端口 `3080` 被占用、`link:` 依赖缺失和安装后无角标的排查步骤
+- 加强 `userToken` 获取、凭据区分和日志/会话压缩包脱敏提示
+
+### CI
+
+- 新增 Windows 与 Ubuntu 的入口导入、客户端语法、npm 打包内容及发布 dry-run 检查
+
 ## [1.0.0] - 2026-08-17
 
 ### 变更

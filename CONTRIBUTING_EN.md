@@ -23,7 +23,7 @@ Thanks for your interest in dsh-usage-dashboard! Issues and pull requests are we
 git clone https://github.com/nzz0991999-ai/dsh-usage-dashboard
 
 # 2. Install into the web profile
-dsh plugin --profile web add ./dsh-usage-dashboard
+dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 
 # 3. Restart dsh web after code changes
 dsh web --port 3080   # or your port
@@ -41,7 +41,7 @@ dsh web --port 3080   # or your port
 
 - One PR does one thing; imperative commit messages (e.g. `fix: handle token expiry notice`)
 - Before touching anything user-data related, read [SECURITY.md](./SECURITY.md) and make sure no credential can end up in the repository
-- Syntax check: `node --check src/index.js && node --check client/client.js`
+- Local checks: `npm install && npm test && node --check client/client.js && npm run pack:check`
 
 ## Security red lines
 

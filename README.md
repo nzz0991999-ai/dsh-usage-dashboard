@@ -42,35 +42,119 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 - **网络只流向 DeepSeek 官方**:token 仅用于向 `platform.deepseek.com` 的三个未公开用量接口发起**只读**查询,以及官方 `api.deepseek.com/user/balance`。插件不含任何遥测、统计上报或第三方转发。
 - **本地存储**:token 保存在 `$DSH_HOME/storages/dsh-usage-dashboard.secret`(0600 权限,仅宿主进程可读);浏览器页面只能拿到脱敏值(`abcd****wxyz`),明文 token 不会下发到浏览器。也可以用环境变量 `DEEPSEEK_PLATFORM_TOKEN` 代替。
 - **仓库与代码不含任何密钥**;插件代码不会打印、记录或上传 token。
+- **分享安装记录前必须脱敏**:不要运行或分享会完整打印 `.credentials.yaml`、环境变量或 token 的命令。发送日志/会话压缩包前,请搜索并移除 `sk-`、`userToken`、`DEEPSEEK_API_KEY`、`DEEPSEEK_PLATFORM_TOKEN` 等内容;不再需要的调试快照(例如 `$DSH_HOME/logs/dsh-web-env-snapshot.json`)应及时删除。
 - **未公开接口风险**:`/api/v0/usage/*` 是平台内部接口,无 SLA,官方改版可能导致数据失效(不影响 Harness 本体,失败时保留上次成功数据)。
 - **清除方法**:面板 ⚙️ 设置 →「清除已保存的 token」,或直接删除 `~/.dsh/storages/dsh-usage-dashboard.secret`。
 - 使用本插件即表示你已了解上述风险并自行承担。详见 [SECURITY.md](./SECURITY.md)。
 
 ## 安装
 
-### 方式一:从 GitHub 克隆(推荐)
+### 准备工作
+
+- Node.js `18` 或更高版本
+- 已能正常启动 DeepSeek Harness
+- `pnpm` 可用(插件安装器会调用它)
+
+先检查:
 
 ```sh
-git clone https://github.com/nzz0991999-ai/dsh-usage-dashboard
-dsh plugin --profile web add ./dsh-usage-dashboard
+node --version
+pnpm --version
 ```
 
-### 方式二:本地源码
+如果第二条命令提示未找到,安装固定版本:
 
 ```sh
-dsh plugin --profile web add <本目录绝对路径>
+npm install --global pnpm@10.15.0
 ```
 
-执行后**重启 `dsh web`**,刷新页面即可看到右下角余额角标。
+### 方式一:npm 固定版本(推荐)
+
+无需克隆仓库,直接安装发布包:
+
+```sh
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+```
+
+这里特意固定为 `1.0.1`,避免未来发布版本后安装结果发生变化。
+
+### 方式二:GitHub Release `.tgz`(npm 不可用时)
+
+```sh
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.1/deepseek-harness-usage-dashboard-1.0.1.tgz
+```
+
+也可以从 [v1.0.1 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.1) 手动下载 `.tgz`,再安装本地文件。Windows 示例:
+
+```powershell
+dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.0.1.tgz"
+```
+
+### 方式三:固定标签的本地源码(开发者)
+
+```sh
+git clone --branch v1.0.1 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
+```
+
+Windows PowerShell 请使用带 `file:` 的绝对路径,并把反斜杠改成正斜杠:
+
+```powershell
+dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
+```
+
+> 不要直接传普通目录路径。Windows 实测中,普通路径可能被安装成 `link:` 依赖,导致 `@deepseek-ai/schemastery` 没有安装;`file:`、npm 包和 Release `.tgz` 均可避免这个问题。
+
+安装完成后,回到你平时启动 Harness 的**同一个工作目录**,重启 `dsh web` 并刷新页面。右下角出现余额角标即安装成功。不要从另一个目录重复启动,否则 Harness 可能使用不同的工作区,或因 `3080` 端口已被占用而启动失败。
 
 ### 配置 DeepSeek Platform userToken
 
-1. 浏览器登录 <https://platform.deepseek.com>
-2. DevTools(F12)→ Application → Local Storage → 选中 `platform.deepseek.com`
-3. 复制 `userToken` 字段的值
-4. 回到 Harness,点开右下角仪表盘 → ⚙️ 设置 → 粘贴 → 「验证并保存」
+`DEEPSEEK_API_KEY` 与 `userToken` 不是同一个凭据:API Key 用于官方余额接口;平台登录态 `userToken` 用于今日/月度用量和实际扣费。`platform.deepseek.com` 与 `api.deepseek.com` 是 DeepSeek 官方统一域名,不是本插件自建的中转地址。
 
-(也可以不粘贴,直接 `export DEEPSEEK_PLATFORM_TOKEN=...` 后重启 `dsh web`。)
+1. 用 Chrome 或 Edge 登录 <https://platform.deepseek.com>,并保持该页面处于登录状态。
+2. 按 `F12` 打开 DevTools → **Application(应用)** → **Local Storage(本地存储)** → `https://platform.deepseek.com`。
+3. 搜索 `userToken`,只复制其 **Value(值)**,不要复制字段名、引号或前后空格。如果找不到,刷新平台页面或重新登录后再检查。
+4. 回到 Harness,打开右下角仪表盘 → ⚙️ 设置 → 粘贴 → 「验证并保存」。保存成功后只会显示脱敏值。
+
+请勿把 `userToken` 粘贴到终端、聊天、Issue、截图或安装日志中。高级用户也可在启动 Harness 前设置 `DEEPSEEK_PLATFORM_TOKEN`,但命令行历史可能保存明文,因此面板粘贴方式更安全。
+
+## 常见安装问题
+
+### `EADDRINUSE: address already in use 127.0.0.1:3080`
+
+这通常表示已有一个 `dsh web` 正在运行,不是插件、API Key 或 `userToken` 出错。如果原来的页面能打开,直接使用并刷新,不要再次启动。
+
+Windows PowerShell 可先确认监听进程:
+
+```powershell
+$dshPid = Get-NetTCPConnection -LocalPort 3080 -State Listen |
+  Select-Object -First 1 -ExpandProperty OwningProcess
+Get-CimInstance Win32_Process -Filter "ProcessId=$dshPid" |
+  Select-Object ProcessId, CommandLine
+```
+
+确认它确实是旧的 `dsh web` 后,再结束并从正确工作目录重启:
+
+```powershell
+taskkill /PID $dshPid /T /F
+Set-Location "F:/path/to/your/harness-workspace"
+dsh web
+```
+
+macOS/Linux 可用 `lsof -nP -iTCP:3080 -sTCP:LISTEN` 查看进程,确认后执行 `kill <PID>`,再从原工作目录启动。
+
+### `ERR_MODULE_NOT_FOUND: @deepseek-ai/schemastery`
+
+这是本地目录被作为 `link:` 安装时可能出现的依赖缺失。移除旧插件后,改用上面的 npm、Release `.tgz`,或带 `file:` 的绝对路径重新安装:
+
+```sh
+dsh plugin --profile web remove dsh-usage-dashboard
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+```
+
+### 安装后没有角标
+
+确认安装和重启都使用 `web` profile,并从原 Harness 工作目录启动;然后对浏览器页面执行一次强制刷新。若当前已有一个旧的 `dsh web` 进程,先按上面的端口占用步骤确认并重启该进程。
 
 ## 覆盖配置
 
@@ -90,7 +174,7 @@ dsh plugin --profile web add <本目录绝对路径>
 ## 卸载
 
 ```sh
-dsh plugin --profile web remove dsh-usage-dashboard
+dsh plugin --profile web remove deepseek-harness-usage-dashboard
 ```
 
-(如不再使用,可同时删除 `$DSH_HOME/storages/dsh-usage-dashboard.secret`。)
+如果你卸载的是使用旧包名安装的 `1.0.0` 或更早版本,请改用 `dsh plugin --profile web remove dsh-usage-dashboard`。如不再使用,可同时删除 `$DSH_HOME/storages/dsh-usage-dashboard.secret`。

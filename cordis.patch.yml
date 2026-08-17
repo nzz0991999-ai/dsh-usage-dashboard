@@ -1,5 +1,5 @@
 # dsh-usage-dashboard bundle 层: 一个插件行。
-# 安装: dsh plugin --profile web add <本目录> (会自动应用本 patch 层)
+# 安装: dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
 # 覆盖配置示例(写进 $DSH_HOME/profiles/web/cordis.patch.yml):
 #   - id: dsh-usage-dashboard
 #     config:
@@ -10,7 +10,7 @@
 #       taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
 - insert:
     - id: dsh-usage-dashboard
-      name: dsh-usage-dashboard
+      name: deepseek-harness-usage-dashboard
       config:
         platformBaseUrl: https://platform.deepseek.com
         apiBaseUrl: https://api.deepseek.com

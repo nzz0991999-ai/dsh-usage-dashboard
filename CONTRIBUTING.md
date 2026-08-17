@@ -23,7 +23,7 @@
 git clone https://github.com/nzz0991999-ai/dsh-usage-dashboard
 
 # 2. 安装到 web profile
-dsh plugin --profile web add ./dsh-usage-dashboard
+dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 
 # 3. 修改代码后重启生效
 dsh web --port 3080   # 或你使用的端口
@@ -41,7 +41,7 @@ dsh web --port 3080   # 或你使用的端口
 
 - 一个 PR 只做一件事;提交信息用祈使句(如 `fix: 处理 token 过期提示`)
 - 涉及用户数据的改动,请先阅读 [SECURITY.md](./SECURITY.md),并确认不会把任何凭据写入仓库
-- 语法自检:`node --check src/index.js && node --check client/client.js`
+- 本地自检:`npm install && npm test && node --check client/client.js && npm run pack:check`
 
 ## 安全红线
 

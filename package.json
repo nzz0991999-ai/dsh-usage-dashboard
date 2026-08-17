@@ -1,9 +1,27 @@
 {
-  "name": "dsh-usage-dashboard",
-  "version": "1.0.0",
-  "description": "DeepSeek 平台用量仪表盘: 在 Harness Web UI 显示账户余额与实际扣费(今日/本月花费、每日柱状图、Token 与模型分布)",
+  "name": "deepseek-harness-usage-dashboard",
+  "version": "1.0.1",
+  "description": "DeepSeek Harness plugin for viewing official DeepSeek balance, usage, and billed spend in the Web UI.",
   "license": "MIT",
   "type": "module",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "usage-dashboard",
+    "billing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nzz0991999-ai/dsh-usage-dashboard.git"
+  },
+  "homepage": "https://github.com/nzz0991999-ai/dsh-usage-dashboard#readme",
+  "bugs": {
+    "url": "https://github.com/nzz0991999-ai/dsh-usage-dashboard/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
@@ -14,8 +32,18 @@
     "src",
     "client",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "README_EN.md",
+    "SECURITY.md",
+    "SECURITY_EN.md",
+    "CHANGELOG.md",
+    "CHANGELOG_EN.md",
+    "LICENSE"
   ],
+  "scripts": {
+    "test": "node --input-type=module -e \"await import('./src/index.js'); console.log('host import ok')\"",
+    "pack:check": "npm pack --dry-run"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -29,8 +57,7 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "^3.18.1",
-    "zod": "^4.4.3"
+    "@deepseek-ai/schemastery": "3.18.1"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",

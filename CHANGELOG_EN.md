@@ -4,6 +4,25 @@
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [SemVer](https://semver.org/).
 
+## [1.0.1] - 2026-08-18
+
+### Changed
+
+- Renamed the npm package to the available `deepseek-harness-usage-dashboard`; the runtime plugin ID remains `dsh-usage-dashboard`
+- Removed unused `zod` and pinned `@deepseek-ai/schemastery`
+- Included the bilingual README, Security, Changelog, and License files in the npm package
+
+### Installation and docs
+
+- Made the pinned npm package the primary install path and added a GitHub Release `.tgz` fallback
+- Added Node.js/pnpm prerequisites, Windows `file:` local installation, and same-workspace restart guidance
+- Added troubleshooting for occupied port `3080`, missing `link:` dependencies, and a missing balance pill
+- Improved `userToken` onboarding, credential distinctions, and sanitization guidance for logs/session archives
+
+### CI
+
+- Added Windows and Ubuntu checks for host import, client syntax, npm package contents, and publish dry-run
+
 ## [1.0.0] - 2026-08-17
 
 ### Changed
