@@ -4,10 +4,12 @@
 
 DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一枚余额角标,点开展示**真实扣费数据**(与 platform.deepseek.com/usage 同源),不必再切回开发平台查看花费。
 
+> **适用范围:**本插件仅查询 DeepSeek 官方 API 与 DeepSeek Platform 的账户余额、用量和扣费数据。即使 Harness 配置了其他模型供应商,本插件也不会读取相应供应商的账单;此时面板可能继续显示 DeepSeek 数据、显示不可用或报错,均不代表当前模型供应商的真实余额或花费。
+
 ## 功能
 
-- **账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分
-- **今日 / 本月实际花费与 Token**、请求数、缓存命中率
+- **DeepSeek 账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分
+- **DeepSeek 今日 / 本月实际花费与 Token**、请求数、缓存命中率
 - **每日柱状图**(花费 / Token 双视图),SVG 手绘无重型依赖,可回看历史月份
 - **模型分布**(按实际扣费聚合)
 - **userToken 管理面板**:一次性粘贴平台登录态,保存在宿主端 `$DSH_HOME/storages/dsh-usage-dashboard.secret`(0600 权限),浏览器只会拿到脱敏值;支持验证、清除、环境变量 `DEEPSEEK_PLATFORM_TOKEN` 兜底
@@ -22,7 +24,7 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 > DeepSeek 账单本身有分钟级结算延迟,任务刚结束立刻拉到的数字可能尚未完全入账,下一个轮询周期会自动补齐。
 
-## 数据来源
+## DeepSeek 数据来源
 
 | 数据 | 接口 | 凭据 |
 |---|---|---|
@@ -61,7 +63,7 @@ dsh plugin --profile web add <本目录绝对路径>
 
 执行后**重启 `dsh web`**,刷新页面即可看到右下角余额角标。
 
-### 配置 userToken
+### 配置 DeepSeek Platform userToken
 
 1. 浏览器登录 <https://platform.deepseek.com>
 2. DevTools(F12)→ Application → Local Storage → 选中 `platform.deepseek.com`
@@ -92,4 +94,3 @@ dsh plugin --profile web remove dsh-usage-dashboard
 ```
 
 (如不再使用,可同时删除 `$DSH_HOME/storages/dsh-usage-dashboard.secret`。)
-

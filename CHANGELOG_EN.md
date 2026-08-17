@@ -4,6 +4,17 @@
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [SemVer](https://semver.org/).
 
+## [1.0.0] - 2026-08-17
+
+### Changed
+
+- Declared the project stable and bumped the version to `1.0.0`
+
+### Docs
+
+- Clarified that the plugin supports balance, usage, and billing data only from the official DeepSeek API and DeepSeek Platform
+- Clarified that, with another model provider, the panel does not represent that provider's actual balance or cost and may show an unavailable state or report an error
+
 ## [0.1.0] - 2026-08-17
 
 ### Added

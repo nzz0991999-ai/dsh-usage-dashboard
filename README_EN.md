@@ -4,10 +4,12 @@
 
 A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): a balance pill in the bottom-right corner of the Web UI that expands into a full panel showing your **actual billed spend** (same data source as platform.deepseek.com/usage) — no more switching back to the platform to check costs.
 
+> **Scope:** This plugin queries only balance, usage, and billing data from the official DeepSeek API and DeepSeek Platform. Even if Harness is configured with another model provider, the plugin does not read that provider's billing data. The panel may continue to show DeepSeek data, show an unavailable state, or report an error; none of these represent the current model provider's actual balance or cost.
+
 ## Features
 
-- **Account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
-- **Today / current-month actual cost and tokens**, request count, cache hit rate
+- **DeepSeek account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
+- **DeepSeek today / current-month actual cost and tokens**, request count, cache hit rate
 - **Daily bar chart** (cost / token dual view, hand-rolled SVG, no heavy dependencies), historical month browsing; model breakdown
 - **Refresh strategy**: fixed polling (host every 10 min by default / page every 30 s) + refresh right after each task completes (`turn/end` event, 60 s cooldown) + manual force refresh
 - **userToken panel**: paste once, online validation, one-click clear, masked display
@@ -22,7 +24,7 @@ A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 > DeepSeek billing settles with a few minutes of delay, so numbers fetched right after a task may not be fully settled yet; the next polling cycle catches up automatically.
 
-## Data sources
+## DeepSeek data sources
 
 | Data | Endpoint | Credential |
 |---|---|---|
@@ -60,7 +62,7 @@ dsh plugin --profile web add <absolute path to this directory>
 
 Restart `dsh web` afterwards and refresh the page — the balance pill appears in the bottom-right corner.
 
-### Configure userToken
+### Configure DeepSeek Platform userToken
 
 1. Sign in to <https://platform.deepseek.com> in your browser
 2. DevTools (F12) → Application → Local Storage → select `platform.deepseek.com`

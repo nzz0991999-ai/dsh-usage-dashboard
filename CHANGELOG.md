@@ -4,6 +4,17 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 格式,版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [1.0.0] - 2026-08-17
+
+### 变更
+
+- 项目进入稳定版本,版本号升级至 `1.0.0`
+
+### 文档
+
+- 明确插件仅支持 DeepSeek 官方 API 与 DeepSeek Platform 的余额、用量和扣费数据
+- 明确使用其他模型供应商时,面板数据不代表该供应商的真实余额或花费,并可能显示不可用或报错
+
 ## [0.1.0] - 2026-08-17
 
 ### 新增

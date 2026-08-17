@@ -2,6 +2,11 @@
 
 [English](./SECURITY_EN.md) | **中文**
 
+## 支持范围
+
+- 本插件仅支持查询 DeepSeek 官方 API 与 DeepSeek Platform 的账户余额、用量和扣费数据,不支持 Harness 中配置的其他模型供应商。
+- 使用其他供应商时,面板可能继续显示 DeepSeek 数据、显示不可用或报错;这些结果均不代表当前模型供应商的真实余额或花费。
+
 ## 凭证处理原则
 
 - 本仓库与代码中**不包含任何密钥**。请勿在 Issue、PR 或任何公开渠道粘贴你的 `userToken` 或 API Key。

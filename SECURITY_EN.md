@@ -2,6 +2,11 @@
 
 **English** | [中文](./SECURITY.md)
 
+## Supported scope
+
+- This plugin queries only balance, usage, and billing data from the official DeepSeek API and DeepSeek Platform. It does not support other model providers configured in Harness.
+- When another provider is in use, the panel may continue to show DeepSeek data, show an unavailable state, or report an error. None of these results represent the current model provider's actual balance or cost.
+
 ## Credential handling principles
 
 - This repository and its code **contain no credentials**. Never paste your `userToken` or API key into Issues, PRs, or any public channel.
