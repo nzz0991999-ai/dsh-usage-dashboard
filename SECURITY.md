@@ -1,5 +1,7 @@
 # Security Policy
 
+[English](./SECURITY_EN.md) | **中文**
+
 ## 凭证处理原则
 
 - 本仓库与代码中**不包含任何密钥**。请勿在 Issue、PR 或任何公开渠道粘贴你的 `userToken` 或 API Key。

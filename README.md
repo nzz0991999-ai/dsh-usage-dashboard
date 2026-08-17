@@ -1,5 +1,7 @@
 # dsh-usage-dashboard
 
+[English](./README_EN.md) | **中文**
+
 DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一枚余额角标,点开展示**真实扣费数据**(与 platform.deepseek.com/usage 同源),不必再切回开发平台查看花费。
 
 ## 功能

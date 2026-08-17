@@ -1,5 +1,7 @@
 # Changelog
 
+[English](./CHANGELOG_EN.md) | **中文**
+
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 格式,版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
 ## [0.1.0] - 2026-08-17

@@ -1,5 +1,7 @@
 # Contributing
 
+[English](./CONTRIBUTING_EN.md) | **中文**
+
 感谢你对 dsh-usage-dashboard 的关注!欢迎提交 Issue 和 Pull Request。
 
 ## 目录结构
