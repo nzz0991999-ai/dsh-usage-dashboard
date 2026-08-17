@@ -1,0 +1,22 @@
+# dsh-usage-dashboard bundle 层: 一个插件行。
+# 安装: dsh plugin --profile web add <本目录> (会自动应用本 patch 层)
+# 覆盖配置示例(写进 $DSH_HOME/profiles/web/cordis.patch.yml):
+#   - id: dsh-usage-dashboard
+#     config:
+#       refreshIntervalMs: 300000      # 服务器向 DeepSeek 拉取用量的频率(ms)
+#       clientPollIntervalMs: 15000    # 浏览器读取缓存的频率(ms)
+#       timeoutMs: 8000                # 单次请求超时(ms)
+#       historyMonths: 6               # 面板可回看的月数
+#       taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
+- insert:
+    - id: dsh-usage-dashboard
+      name: dsh-usage-dashboard
+      config:
+        platformBaseUrl: https://platform.deepseek.com
+        apiBaseUrl: https://api.deepseek.com
+        apiKeyRef: DEEPSEEK_API_KEY
+        refreshIntervalMs: 600000
+        clientPollIntervalMs: 30000
+        timeoutMs: 8000
+        historyMonths: 6
+        taskRefreshCooldownMs: 60000
