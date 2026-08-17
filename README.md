@@ -91,13 +91,3 @@ dsh plugin --profile web remove dsh-usage-dashboard
 
 (如不再使用,可同时删除 `$DSH_HOME/storages/dsh-usage-dashboard.secret`。)
 
-## 开发与发布流程
-
-- **本地运行版**:`dsh-usage-dashboard/` —— 已 `dsh plugin --profile web add` 链接进 profile,直接改代码、重启 `dsh web` 即生效。
-- **GitHub 发布版**:`dsh-usage-dashboard-github/` —— 独立副本 + git 仓库,与本地运行版隔离,发布过程不影响正在运行的插件。
-- **同步**:本地改完并验证后,运行 `./sync-to-github.sh` 把发布文件复制到 GitHub 版目录,再在其中 `git add -A && git commit && git push`。
-- 原则:**先在本机跑通更新,再同步发布**。
-
-## License
-
-MIT
