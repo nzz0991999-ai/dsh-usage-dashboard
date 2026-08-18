@@ -35,6 +35,9 @@ jobs:
       - name: Check client syntax
         run: node --check client/client.js
 
+      - name: Verify package and client IDs
+        run: npm run verify:package
+
       - name: Inspect npm package contents
         run: npm pack --dry-run --json > pack-result.json
 

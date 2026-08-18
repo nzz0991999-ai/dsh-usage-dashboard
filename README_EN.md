@@ -6,6 +6,8 @@ A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 > **Scope:** This plugin queries only balance, usage, and billing data from the official DeepSeek API and DeepSeek Platform. Even if Harness is configured with another model provider, the plugin does not read that provider's billing data. The panel may continue to show DeepSeek data, show an unavailable state, or report an error; none of these represent the current model provider's actual balance or cost.
 
+The current stable version is `1.0.2`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) for the changes in every version.
+
 ## Features
 
 - **DeepSeek account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
@@ -72,27 +74,30 @@ npm install --global pnpm@10.15.0
 No repository clone is required:
 
 ```sh
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
 ```
 
-The explicit `1.0.1` keeps the installation reproducible when later versions are released.
+The explicit `1.0.2` keeps the installation reproducible when later versions are released.
 
-### Option 2: GitHub Release `.tgz` (when npm is unavailable)
+### Option 2: GitHub Release `.tgz` (when npm is unavailable or pnpm integrity policy blocks a URL)
 
-```sh
-dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.1/deepseek-harness-usage-dashboard-1.0.1.tgz
-```
-
-You may also download the `.tgz` manually from the [v1.0.1 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.1), then install the local file. Windows example:
+Download the `.tgz` from the [v1.0.2 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.2), then install it with a local `file:` path. This lets pnpm record the tarball in the Profile lockfile:
 
 ```powershell
-dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.0.1.tgz"
+dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz"
+Get-FileHash "C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz" -Algorithm SHA256
+```
+
+The SHA-256 must match the value published on the Release page. You may also try the remote URL directly:
+
+```sh
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.2/deepseek-harness-usage-dashboard-1.0.2.tgz
 ```
 
 ### Option 3: pinned local source (developers)
 
 ```sh
-git clone --branch v1.0.1 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+git clone --branch v1.0.2 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
 dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 ```
 
@@ -148,7 +153,7 @@ A local directory installed as a `link:` dependency may omit dependencies. Remov
 
 ```sh
 dsh plugin --profile web remove dsh-usage-dashboard
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
 ```
 
 ### No balance pill after installation

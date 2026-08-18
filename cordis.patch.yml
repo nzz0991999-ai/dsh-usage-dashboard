@@ -1,5 +1,5 @@
 # dsh-usage-dashboard bundle 层: 一个插件行。
-# 安装: dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+# 安装: dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
 # 覆盖配置示例(写进 $DSH_HOME/profiles/web/cordis.patch.yml):
 #   - id: dsh-usage-dashboard
 #     config:

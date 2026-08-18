@@ -4,6 +4,34 @@
 
 This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [SemVer](https://semver.org/).
 
+## Version guide
+
+| Version | Focus |
+|---|---|
+| `1.0.2` | Fixes the browser bundle registration ID after the npm rename and adds CI/install safeguards |
+| `1.0.1` | Renamed the npm package, removed `zod`, and added Windows install/troubleshooting docs; superseded by `1.0.2` |
+| `1.0.0` | Declared the stable release and clarified DeepSeek-only billing scope |
+| `0.1.0` | First feature release with the balance pill, usage panel, token management, and refresh strategy |
+
+## [1.0.2] - 2026-08-18
+
+### Fixed
+
+- Fixed the top-level `window.__ModuleLoader__.load()` registration ID so it matches the npm package name `deepseek-harness-usage-dashboard`
+- Kept the host-side Cordis runtime ID `dsh-usage-dashboard` unchanged, preserving existing config, routes, cache, and uninstall identifiers
+- Fixed the `Failed to load plugins` boot failure that could affect new installations
+
+### Installation and docs
+
+- Standardized current installation examples on `1.0.2`
+- Changed the GitHub Release fallback to “download `.tgz`, verify SHA-256, install with `file:`” for pnpm integrity-policy compatibility
+- Marked `1.0.1` as superseded so new users do not install the registration-ID-broken version
+- Added a version guide and synchronized the per-version changes in both README languages
+
+### CI
+
+- Added an automated assertion that the client top-level registration ID equals `package.json.name`, preventing another package-rename loading failure
+
 ## [1.0.1] - 2026-08-18
 
 ### Changed
@@ -22,6 +50,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 ### CI
 
 - Added Windows and Ubuntu checks for host import, client syntax, npm package contents, and publish dry-run
+
+> **Compatibility notice:** `1.0.1` changed the npm package name but retained the old client registration ID. It has been superseded by `1.0.2`; new users should not install `1.0.1`.
 
 ## [1.0.0] - 2026-08-17
 

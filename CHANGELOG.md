@@ -4,6 +4,34 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 格式,版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## 版本导航
+
+| 版本 | 重点 |
+|---|---|
+| `1.0.2` | 修复 npm 包名变更后的浏览器 bundle 注册 ID,补充一致性 CI 与稳定安装路径 |
+| `1.0.1` | 更换 npm 包名、移除 `zod`、补充 Windows 安装与排障文档；已被 `1.0.2` 替代 |
+| `1.0.0` | 宣布稳定版本,明确仅支持 DeepSeek 官方余额、用量和扣费数据 |
+| `0.1.0` | 首个功能版本,提供余额角标、用量面板、Token 管理和刷新机制 |
+
+## [1.0.2] - 2026-08-18
+
+### 修复
+
+- 修正浏览器端 `window.__ModuleLoader__.load()` 的最外层注册 ID,使其与 npm 包名 `deepseek-harness-usage-dashboard` 一致
+- 保留宿主端 Cordis 运行时 ID `dsh-usage-dashboard`,避免破坏已有配置、路由、缓存和卸载标识
+- 修复新用户安装后可能出现的 `Failed to load plugins`
+
+### 安装与文档
+
+- 当前推荐安装版本统一为 `1.0.2`
+- GitHub Release 备用方式改为“下载 `.tgz`、校验 SHA-256、使用 `file:` 安装”,兼容 pnpm 完整性策略
+- 明确 `1.0.1` 已被替代,避免继续安装存在前端注册 ID 问题的版本
+- README 增加版本导航,中英文文档同步说明每个版本的重点变化
+
+### CI
+
+- 新增自动断言:客户端最外层注册 ID 必须等于 `package.json.name`,防止包重命名再次造成前端加载失败
+
 ## [1.0.1] - 2026-08-18
 
 ### 变更
@@ -22,6 +50,8 @@
 ### CI
 
 - 新增 Windows 与 Ubuntu 的入口导入、客户端语法、npm 打包内容及发布 dry-run 检查
+
+> **兼容性提示:**`1.0.1` 的 npm 包名已经更换,但前端 bundle 仍注册旧 ID。该版本已被 `1.0.2` 替代,新用户不要安装 `1.0.1`。
 
 ## [1.0.0] - 2026-08-17
 

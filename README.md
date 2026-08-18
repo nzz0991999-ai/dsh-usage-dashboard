@@ -6,6 +6,8 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 > **适用范围:**本插件仅查询 DeepSeek 官方 API 与 DeepSeek Platform 的账户余额、用量和扣费数据。即使 Harness 配置了其他模型供应商,本插件也不会读取相应供应商的账单;此时面板可能继续显示 DeepSeek 数据、显示不可用或报错,均不代表当前模型供应商的真实余额或花费。
 
+当前稳定版本为 `1.0.2`,完整的小版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
+
 ## 功能
 
 - **DeepSeek 账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分
@@ -73,27 +75,30 @@ npm install --global pnpm@10.15.0
 无需克隆仓库,直接安装发布包:
 
 ```sh
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
 ```
 
-这里特意固定为 `1.0.1`,避免未来发布版本后安装结果发生变化。
+这里特意固定为 `1.0.2`,避免未来发布版本后安装结果发生变化。
 
-### 方式二:GitHub Release `.tgz`(npm 不可用时)
+### 方式二:GitHub Release `.tgz`(npm 不可用或受 pnpm 完整性策略限制时)
 
-```sh
-dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.1/deepseek-harness-usage-dashboard-1.0.1.tgz
-```
-
-也可以从 [v1.0.1 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.1) 手动下载 `.tgz`,再安装本地文件。Windows 示例:
+请先从 [v1.0.2 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.2) 下载 `.tgz`,再用本地 `file:` 路径安装。这样 pnpm 可以把 tarball 固定写入 Profile 锁文件:
 
 ```powershell
-dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.0.1.tgz"
+dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz"
+Get-FileHash "C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz" -Algorithm SHA256
+```
+
+SHA-256 应与 Release 页面公布的值一致。远程 URL 也可直接尝试:
+
+```sh
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.2/deepseek-harness-usage-dashboard-1.0.2.tgz
 ```
 
 ### 方式三:固定标签的本地源码(开发者)
 
 ```sh
-git clone --branch v1.0.1 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+git clone --branch v1.0.2 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
 dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 ```
 
@@ -149,7 +154,7 @@ macOS/Linux 可用 `lsof -nP -iTCP:3080 -sTCP:LISTEN` 查看进程,确认后执�
 
 ```sh
 dsh plugin --profile web remove dsh-usage-dashboard
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.1
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
 ```
 
 ### 安装后没有角标

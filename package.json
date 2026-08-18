@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-usage-dashboard",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "DeepSeek Harness plugin for viewing official DeepSeek balance, usage, and billed spend in the Web UI.",
   "license": "MIT",
   "type": "module",
@@ -42,7 +42,8 @@
   ],
   "scripts": {
     "test": "node --input-type=module -e \"await import('./src/index.js'); console.log('host import ok')\"",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "npm pack --dry-run",
+    "verify:package": "node scripts/verify-package.mjs"
   },
   "dsh": {
     "bundle": {

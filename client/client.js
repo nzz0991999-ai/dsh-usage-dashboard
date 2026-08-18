@@ -8,7 +8,7 @@
  *   - 设置面板: 粘贴平台 userToken(仅存宿主端 0600 密钥文件, 浏览器只拿脱敏值)
  */
 window.__ModuleLoader__.load({
-	id: "dsh-usage-dashboard",
+	id: "deepseek-harness-usage-dashboard",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
