@@ -8,6 +8,12 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 当前稳定版本为 `1.0.2`,完整的小版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
 
+## 效果预览
+
+安装并配置后,右下角余额角标可展开为完整的 DeepSeek 用量仪表盘:
+
+![DeepSeek Harness 用量仪表盘效果预览](./docs/images/usage-dashboard-preview.jpg)
+
 ## 功能
 
 - **DeepSeek 账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分

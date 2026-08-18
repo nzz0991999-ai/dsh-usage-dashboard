@@ -8,6 +8,12 @@ A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 The current stable version is `1.0.2`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) for the changes in every version.
 
+## Preview
+
+After installation and configuration, the bottom-right balance pill expands into the full DeepSeek usage dashboard:
+
+![DeepSeek Harness usage dashboard preview](./docs/images/usage-dashboard-preview.jpg)
+
 ## Features
 
 - **DeepSeek account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
