@@ -1,5 +1,5 @@
 # dsh-usage-dashboard bundle 层: 一个插件行。
-# 安装: dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
+# 安装: dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 # 覆盖配置示例(写进 $DSH_HOME/profiles/web/cordis.patch.yml):
 #   - id: dsh-usage-dashboard
 #     config:
@@ -8,6 +8,7 @@
 #       timeoutMs: 8000                # 单次请求超时(ms)
 #       historyMonths: 6               # 面板可回看的月数
 #       taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
+#       peakWindows: [09:00-12:00, 14:00-18:00]   # 峰时窗口(HH:MM-HH:MM, 北京时间)
 - insert:
     - id: dsh-usage-dashboard
       name: deepseek-harness-usage-dashboard
@@ -20,3 +21,6 @@
         timeoutMs: 8000
         historyMonths: 6
         taskRefreshCooldownMs: 60000
+        peakWindows:
+          - 09:00-12:00
+          - 14:00-18:00

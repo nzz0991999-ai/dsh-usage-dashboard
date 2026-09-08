@@ -6,20 +6,22 @@ A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 > **Scope:** This plugin queries only balance, usage, and billing data from the official DeepSeek API and DeepSeek Platform. Even if Harness is configured with another model provider, the plugin does not read that provider's billing data. The panel may continue to show DeepSeek data, show an unavailable state, or report an error; none of these represent the current model provider's actual balance or cost.
 
-The current stable version is `1.0.2`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) for the changes in every version.
+The current stable version is `1.1.0`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) for the changes in every version.
 
 ## Preview
 
-After installation and configuration, the bottom-right balance pill expands into the full DeepSeek usage dashboard:
+After installation and configuration, the bottom-right balance pill expands into the full DeepSeek usage dashboard (peak/valley banner, today/this-month metrics, usage heatmap, and model donut):
 
-![DeepSeek Harness usage dashboard preview](./docs/images/usage-dashboard-preview.jpg)
+![DeepSeek Harness usage dashboard preview (v1.1.0)](./docs/images/usage-dashboard-preview.png)
 
 ## Features
 
-- **DeepSeek account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
-- **DeepSeek today / current-month actual cost and tokens**, request count, cache hit rate
-- **Daily bar chart** (cost / token dual view, hand-rolled SVG, no heavy dependencies), historical month browsing; model breakdown
-- **Refresh strategy**: fixed polling (host every 10 min by default / page every 30 s) + refresh right after each task completes (`turn/end` event, 60 s cooldown) + manual force refresh
+- **Balance pill**: a compact capsule in the bottom-right corner showing the live balance; during **peak hours** its border glows amber with a soft pulse, during valley hours it glows green; click to open the panel, and click anywhere outside (or the pill again) to close — both open and close animate with a 160 ms fade
+- **Account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
+- **Metric cards (3×2 grid)**: Today amount · Today tokens · Requests (day) / Month amount · Month tokens · Cache hit (month); each today card carries a “share of month” progress bar
+- **Usage heatmap** (GitHub style): daily amount/tokens over the last `historyMonths` months (default 6), darker = higher; hovering a cell pops a live tooltip card with that day's amount, tokens, requests and cache-hit rate (days without usage say “no usage this day”)
+- **Model donut**: grouped by **day / week / month**, browsable with **‹ ›** between periods, and toggling between amount/tokens; the center shows the period total; small models are folded into a gray “Other” (a model is listed individually when its share is ≥1.5% and within the top 8)
+- **Peak/valley banner**: a unified banner at the top of the panel (amber peak / green valley with a compact countdown pill) giving live guidance; default peak windows `09:00–12:00` / `14:00–18:00` Beijing time, other hours are valley at ~50% off; windows configurable via `peakWindows`
 - **userToken panel**: paste once, online validation, one-click clear, masked display
 
 ## Refresh strategy
@@ -28,7 +30,7 @@ After installation and configuration, the bottom-right balance pill expands into
 |---|---|
 | Fixed polling | Host fetches DeepSeek every `refreshIntervalMs` (default 10 min); browser reads the local cache every `clientPollIntervalMs` (default 30 s); polling pauses while the page is hidden and resumes on foreground |
 | Task-completion refresh | Listens for session `turn/end` events and fetches DeepSeek once right after each task, with a minimum cooldown of `taskRefreshCooldownMs` (default 60 s) to coalesce bursts |
-| Manual | The ↻ button force-refreshes through the cache; opening the panel, switching months, and saving settings also refresh immediately |
+| Manual | The ↻ button force-refreshes through the cache; opening the panel, switching chart dimensions, and saving settings also refresh immediately |
 
 > DeepSeek billing settles with a few minutes of delay, so numbers fetched right after a task may not be fully settled yet; the next polling cycle catches up automatically.
 
@@ -80,30 +82,30 @@ npm install --global pnpm@10.15.0
 No repository clone is required:
 
 ```sh
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 ```
 
-The explicit `1.0.2` keeps the installation reproducible when later versions are released.
+The explicit `1.1.0` keeps the installation reproducible when later versions are released.
 
 ### Option 2: GitHub Release `.tgz` (when npm is unavailable or pnpm integrity policy blocks a URL)
 
-Download the `.tgz` from the [v1.0.2 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.2), then install it with a local `file:` path. This lets pnpm record the tarball in the Profile lockfile:
+Download the `.tgz` from the [v1.1.0 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.1.0), then install it with a local `file:` path. This lets pnpm record the tarball in the Profile lockfile:
 
 ```powershell
-dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz"
-Get-FileHash "C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz" -Algorithm SHA256
+dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz"
+Get-FileHash "C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz" -Algorithm SHA256
 ```
 
 The SHA-256 must match the value published on the Release page. You may also try the remote URL directly:
 
 ```sh
-dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.2/deepseek-harness-usage-dashboard-1.0.2.tgz
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.1.0/deepseek-harness-usage-dashboard-1.1.0.tgz
 ```
 
 ### Option 3: pinned local source (developers)
 
 ```sh
-git clone --branch v1.0.2 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+git clone --branch v1.1.0 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
 dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 ```
 
@@ -159,7 +161,7 @@ A local directory installed as a `link:` dependency may omit dependencies. Remov
 
 ```sh
 dsh plugin --profile web remove dsh-usage-dashboard
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 ```
 
 ### No balance pill after installation
@@ -179,6 +181,7 @@ Write into `$DSH_HOME/profiles/web/cordis.patch.yml`:
     historyMonths: 6               # months browsable in the panel
     apiKeyRef: DEEPSEEK_API_KEY    # credential reference for the official balance
     taskRefreshCooldownMs: 60000   # min cooldown of the task-completion refresh (ms)
+    peakWindows: [09:00-12:00, 14:00-18:00]   # peak windows (HH:MM-HH:MM, Beijing time)
 ```
 
 ## Uninstall

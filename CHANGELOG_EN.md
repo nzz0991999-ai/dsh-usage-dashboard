@@ -8,10 +8,42 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 
 | Version | Focus |
 |---|---|
+| `1.1.0` | Major UI overhaul: usage heatmap, model donut (day/week/month + period browsing), 3×2 metric grid, peak/valley glow, outside-click close & fade animations, and “cost” → “amount” wording |
 | `1.0.2` | Fixes the browser bundle registration ID after the npm rename and adds CI/install safeguards |
 | `1.0.1` | Renamed the npm package, removed `zod`, and added Windows install/troubleshooting docs; superseded by `1.0.2` |
 | `1.0.0` | Declared the stable release and clarified DeepSeek-only billing scope |
 | `0.1.0` | First feature release with the balance pill, usage panel, token management, and refresh strategy |
+
+## [1.1.0] - 2026-09-08
+
+### Added
+
+- **Peak/valley display**: a unified banner at the top of the panel (amber peak / green valley with a compact countdown pill) and a peak/valley **border glow** on the bottom-right pill (amber pulse in peak, static green in valley). Default peak windows `09:00–12:00` / `14:00–18:00` Beijing time; other hours are valley (~50% off); windows overridable via `peakWindows`; computed purely client-side
+- **Usage heatmap** (GitHub style, replacing the single-month bar chart): daily amount/tokens across the last `historyMonths` months (default 6), darker = higher, today outlined; hovering a cell pops a live tooltip (date, amount/tokens, requests, cache-hit rate); days with no usage say “no usage this day”
+- **Model donut**: grouped by **day / week / month** and browsable **‹ ›** between periods, toggling amount/tokens, with the period total in the center; small models fold into a gray “Other” (shown individually when share ≥1.5% and within the top 8); zero-usage models hidden; 10-color palette
+- **Metric cards as a 3×2 grid**: Today amount · Today tokens · Requests (day) / Month amount · Month tokens · Cache hit (month), with explicit granularity labels; each today card carries a “share of month” progress bar (hover shows the percentage)
+- **Task-completion refresh**: the host listens for session `turn/end` events and re-fetches from DeepSeek after each task, gated by `taskRefreshCooldownMs` (default 60 s) so bursts coalesce into one fetch
+
+### Changed
+
+- UI wording unified from “cost” to “amount” (Chinese 花费 → 金额)
+- Pill slimmed down: removed the peak/valley text chip and the standalone status dot; it now shows just the amount plus the period border glow
+- Peak/valley banner is now a single line (guidance folded into the title) and the two banners share an identical style except hue; month paging removed (heatmap shows a month window instead)
+- Footer consolidated to “Data source: DeepSeek Platform · Official” (clickable, always underlined) with a muted `v1.1.0` on the right; “Updated HH:MM” moved into the panel header
+- Panel interaction: clicking anywhere outside the panel closes it; opening and closing both animate with a 160 ms fade
+- Granularity labels shortened from “Today/This week/This month” to “Day/Week/Month”; empty states now read “{period} · No usage data”
+
+### Fixed
+
+- Hover tooltip overflowing/clipped on the right-hand columns and causing a horizontal scrollbar — anchored inward and guarded with `overflow-x`
+- `React.` misuse (`React` undefined) that crashed and removed the whole overlay entry when opening — switched to lowercase `react`
+- Donut “week” view crashing on click (block-scoped variable) and day/week paging moving into the future instead of the past (sign bug)
+- Closing panel flicker caused by unmount-then-remount — `closing` is now part of the store snapshot so the fade-out plays in place
+- Crowded/unbalanced metric cards — fixed 3×2 grid with day/month granularity labels
+
+### Installation & docs
+
+- README (EN) feature list, refresh strategy, and install version references synced to `1.1.0`
 
 ## [1.0.2] - 2026-08-18
 

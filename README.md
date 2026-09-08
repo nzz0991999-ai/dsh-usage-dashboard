@@ -6,20 +6,22 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 > **适用范围:**本插件仅查询 DeepSeek 官方 API 与 DeepSeek Platform 的账户余额、用量和扣费数据。即使 Harness 配置了其他模型供应商,本插件也不会读取相应供应商的账单;此时面板可能继续显示 DeepSeek 数据、显示不可用或报错,均不代表当前模型供应商的真实余额或花费。
 
-当前稳定版本为 `1.0.2`,完整的小版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
+当前稳定版本为 `1.1.0`,完整的小版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 效果预览
 
-安装并配置后,右下角余额角标可展开为完整的 DeepSeek 用量仪表盘:
+安装并配置后,右下角余额角标可展开为完整的 DeepSeek 用量仪表盘(峰谷横幅、今日/本月指标、用量热力图与模型分布环形图):
 
-![DeepSeek Harness 用量仪表盘效果预览](./docs/images/usage-dashboard-preview.jpg)
+![DeepSeek Harness 用量仪表盘效果预览(v1.1.0)](./docs/images/usage-dashboard-preview.png)
 
 ## 功能
 
-- **DeepSeek 账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分
-- **DeepSeek 今日 / 本月实际花费与 Token**、请求数、缓存命中率
-- **每日柱状图**(花费 / Token 双视图),SVG 手绘无重型依赖,可回看历史月份
-- **模型分布**(按实际扣费聚合)
+- **余额角标**:右下角一枚胶囊实时显示账户余额;当前为**峰时/谷时**时,边框呈现琥珀呼吸光 / 绿色静光;点击展开面板,点击面板外任意处或角标即可关闭(打开/关闭均带 160ms 淡入淡出)
+- **账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分
+- **指标卡(3×2 网格)**:今日金额 · 今日Token · 请求数(日)/ 本月金额 · 本月Token · 缓存命中率(月);今日两张卡各带"今日占本月"进度条,粒度一目了然
+- **用量热力图**(GitHub 风格):近 `historyMonths` 个月(默认 6)的每日金额/Token,颜色越深用量越高;悬停单格即时浮卡显示当日金额、Token、请求数与命中率,无用量日提示"该日无用量"
+- **模型分布环形图**:支持 **日 / 周 / 月** 三种周期并可 **‹ › 左右翻看**、金额/Token 两维切换;中心显示周期总量;小额模型自动合并为灰色"其他"(份额 ≥1.5% 且前 8 名单独显示)
+- **峰谷时段横幅**:面板顶部统一风格横幅(峰橙红 / 谷绿,右侧紧凑倒计时),提示当前计费时段与建议(默认峰时 `09:00–12:00`、`14:00–18:00` 北京时间,其余谷时约 5 折;窗口用 `peakWindows` 配置)
 - **userToken 管理面板**:一次性粘贴平台登录态,保存在宿主端 `$DSH_HOME/storages/dsh-usage-dashboard.secret`(0600 权限),浏览器只会拿到脱敏值;支持验证、清除、环境变量 `DEEPSEEK_PLATFORM_TOKEN` 兜底
 
 ## 刷新机制
@@ -28,7 +30,7 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 |---|---|
 | 固定轮询 | 宿主端每 `refreshIntervalMs`(默认 10 分钟)向 DeepSeek 拉取一次;浏览器端每 `clientPollIntervalMs`(默认 30 秒)读一次本地缓存;页面隐藏时暂停,回到前台立即补拉 |
 | 任务完成即时刷新 | 监听会话 `turn/end` 事件,每轮任务结束后立即向 DeepSeek 拉取一次,最小冷却 `taskRefreshCooldownMs`(默认 60 秒),高频任务自动合并防连击 |
-| 手动 | 面板 ↻ 按钮穿透缓存强制刷新;打开面板、切换月份、保存配置时也会立即刷新 |
+| 手动 | 面板 ↻ 按钮穿透缓存强制刷新;打开面板、切换图表维度、保存配置时也会立即刷新 |
 
 > DeepSeek 账单本身有分钟级结算延迟,任务刚结束立刻拉到的数字可能尚未完全入账,下一个轮询周期会自动补齐。
 
@@ -81,30 +83,30 @@ npm install --global pnpm@10.15.0
 无需克隆仓库,直接安装发布包:
 
 ```sh
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 ```
 
-这里特意固定为 `1.0.2`,避免未来发布版本后安装结果发生变化。
+这里特意固定为 `1.1.0`,避免未来发布版本后安装结果发生变化。
 
 ### 方式二:GitHub Release `.tgz`(npm 不可用或受 pnpm 完整性策略限制时)
 
-请先从 [v1.0.2 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.0.2) 下载 `.tgz`,再用本地 `file:` 路径安装。这样 pnpm 可以把 tarball 固定写入 Profile 锁文件:
+请先从 [v1.1.0 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.1.0) 下载 `.tgz`,再用本地 `file:` 路径安装。这样 pnpm 可以把 tarball 固定写入 Profile 锁文件:
 
 ```powershell
-dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz"
-Get-FileHash "C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.0.2.tgz" -Algorithm SHA256
+dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz"
+Get-FileHash "C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz" -Algorithm SHA256
 ```
 
 SHA-256 应与 Release 页面公布的值一致。远程 URL 也可直接尝试:
 
 ```sh
-dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.0.2/deepseek-harness-usage-dashboard-1.0.2.tgz
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.1.0/deepseek-harness-usage-dashboard-1.1.0.tgz
 ```
 
 ### 方式三:固定标签的本地源码(开发者)
 
 ```sh
-git clone --branch v1.0.2 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+git clone --branch v1.1.0 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
 dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 ```
 
@@ -160,7 +162,7 @@ macOS/Linux 可用 `lsof -nP -iTCP:3080 -sTCP:LISTEN` 查看进程,确认后执�
 
 ```sh
 dsh plugin --profile web remove dsh-usage-dashboard
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 ```
 
 ### 安装后没有角标
@@ -180,6 +182,7 @@ dsh plugin --profile web add deepseek-harness-usage-dashboard@1.0.2
     historyMonths: 6               # 面板可回看的月数
     apiKeyRef: DEEPSEEK_API_KEY    # 官方余额用的凭据引用名
     taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
+    peakWindows: [09:00-12:00, 14:00-18:00]   # 峰时窗口(HH:MM-HH:MM, 北京时间)
 ```
 
 ## 卸载

@@ -39,6 +39,8 @@ export const Config = Schema.object({
   historyMonths: Schema.number().min(1).max(24).default(6),
   /** 任务完成后触发即时刷新的最小冷却(ms), 防止高频任务连击平台接口 */
   taskRefreshCooldownMs: Schema.number().min(5000).default(60000),
+  /** 峰时窗口列表("HH:MM-HH:MM", 北京时间); 其余时间为谷时 */
+  peakWindows: Schema.array(Schema.string()).default(['09:00-12:00', '14:00-18:00']),
 })
 
 // ---------------------------------------------------------------------------
@@ -252,6 +254,9 @@ export function apply(ctx, config) {
     timeoutMs: config.timeoutMs ?? 8000,
     historyMonths: config.historyMonths ?? 6,
     taskRefreshCooldownMs: config.taskRefreshCooldownMs ?? 60000,
+    peakWindows: Array.isArray(config.peakWindows) && config.peakWindows.length > 0
+      ? [...config.peakWindows]
+      : ['09:00-12:00', '14:00-18:00'],
   }
 
   // ---- userToken 持久化($DSH_HOME/storages/dsh-usage-dashboard.secret, 0600) ----
@@ -443,6 +448,7 @@ export function apply(ctx, config) {
         timeoutMs: runtimeConfig.timeoutMs,
         historyMonths: runtimeConfig.historyMonths,
         taskRefreshCooldownMs: runtimeConfig.taskRefreshCooldownMs,
+        peakWindows: [...runtimeConfig.peakWindows],
         tokenMasked: maskToken(token),
       },
       official: { ...official, payload: official.payload },
