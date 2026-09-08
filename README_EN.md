@@ -148,6 +148,16 @@ dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
 
 After installation, return to the **same workspace directory** from which you normally start Harness, restart `dsh web`, and refresh the page. The bottom-right balance pill confirms success. Starting from another directory may select a different Harness workspace or fail because port `3080` is already in use.
 
+#### Local development loop (dev-install.sh)
+
+pnpm installs a `file:` directory as a **copy** (not a symlink), so editing the source does not change what is already installed. The `dev-install.sh` script at the repository root reinstalls the current source into the local `web` profile in one step — run it after every code change:
+
+```sh
+./dev-install.sh
+```
+
+Then stop and restart `dsh web` and hard-refresh the page (Cmd/Ctrl+Shift+R). The script runs `remove` then `add`, and is meant for your own development machine (macOS/Linux); on Windows run the `remove` + `add` commands above manually. For end users' machines, use the npm / Release methods and follow the “Upgrading” section.
+
 ### Configure DeepSeek Platform userToken
 
 `DEEPSEEK_API_KEY` and `userToken` are different credentials. The API key serves the official balance endpoint; the platform sign-in `userToken` serves daily/monthly usage and actual billed-spend endpoints. `platform.deepseek.com` and `api.deepseek.com` are DeepSeek's official shared domains, not relays operated by this plugin.

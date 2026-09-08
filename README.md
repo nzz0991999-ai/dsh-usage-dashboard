@@ -149,6 +149,16 @@ dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
 
 安装完成后,回到你平时启动 Harness 的**同一个工作目录**,重启 `dsh web` 并刷新页面。右下角出现余额角标即安装成功。不要从另一个目录重复启动,否则 Harness 可能使用不同的工作区,或因 `3080` 端口已被占用而启动失败。
 
+#### 本地开发循环(dev-install.sh)
+
+pnpm 会把 `file:` 目录安装成**副本**(而非符号链接),所以修改源码后,已安装的插件不会自动跟着变。仓库根目录的 `dev-install.sh` 会把当前源码一键重装进本机 `web` profile——每次改完代码执行一次即可:
+
+```sh
+./dev-install.sh
+```
+
+然后停止并重启 `dsh web`,再对浏览器页面做一次硬刷新(Cmd/Ctrl+Shift+R)。脚本会先 `remove` 再 `add`,适合你自己的开发机(macOS/Linux);Windows 请手动执行上面的 `remove` + `add`。分发给最终用户的机器请使用 npm / Release 方式,并按「升级」章节更新。
+
 ### 配置 DeepSeek Platform userToken
 
 `DEEPSEEK_API_KEY` 与 `userToken` 不是同一个凭据:API Key 用于官方余额接口;平台登录态 `userToken` 用于今日/月度用量和实际扣费。`platform.deepseek.com` 与 `api.deepseek.com` 是 DeepSeek 官方统一域名,不是本插件自建的中转地址。
