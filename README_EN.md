@@ -92,15 +92,29 @@ If the second command is not found, install the pinned version:
 npm install --global pnpm@10.15.0
 ```
 
-### Option 1: pinned npm package (recommended)
+### Option 1: npm package (recommended)
 
-No repository clone is required:
+No repository clone is required. Whether future upgrades are one command away depends on the version spec you install with — choose per your needs:
+
+#### Option 1A: track updates (default recommendation, easiest upgrades)
+
+```sh
+dsh plugin --profile web add deepseek-harness-usage-dashboard
+```
+
+Without a fixed version, pnpm records a range such as `^1.1.0`. Later, a single command tracks the newest 1.x:
+
+```sh
+dsh plugin --profile web update deepseek-harness-usage-dashboard
+```
+
+#### Option 1B: pinned version (reproducible)
 
 ```sh
 dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 ```
 
-The explicit `1.1.0` keeps the installation reproducible when later versions are released.
+The explicit `1.1.0` keeps the installation reproducible when later versions are released. To upgrade, re-run the command with the new version number.
 
 ### Option 2: GitHub Release `.tgz` (when npm is unavailable or pnpm integrity policy blocks a URL)
 
@@ -144,6 +158,25 @@ After installation, return to the **same workspace directory** from which you no
 4. In Harness, open the bottom-right dashboard → ⚙️ settings → paste → "Verify & save". Only a masked value is shown after saving.
 
 Never paste a `userToken` into a terminal, chat, Issue, screenshot, or installation log. Advanced users may set `DEEPSEEK_PLATFORM_TOKEN` before starting Harness, but shell history can retain plaintext, so the dashboard form is safer.
+
+## Upgrading
+
+When a newer version is available, run the command for your installation method, then restart `dsh web` from the same workspace directory and hard-refresh the page:
+
+| Installation | Upgrade to latest |
+|---|---|
+| npm track-updates (Option 1A) | `dsh plugin --profile web update deepseek-harness-usage-dashboard` |
+| npm pinned (Option 1B) | `dsh plugin --profile web add deepseek-harness-usage-dashboard@<new-version>` |
+| GitHub Release `.tgz` (Option 2) | Download the new `.tgz` from the Release, then `dsh plugin --profile web add "file:…"` again |
+| Pinned source (Option 3) | `git fetch --tags && git checkout v<new-version>`, then re-`add` |
+
+Check for updates first:
+
+```sh
+dsh plugin --profile web outdated
+```
+
+> With Option 1A (track updates), `update` moves you to the newest 1.x automatically; with Option 1B (pinned), `update` never jumps versions — change the spec to the new version explicitly. That is the reproducibility trade-off.
 
 ## Installation troubleshooting
 

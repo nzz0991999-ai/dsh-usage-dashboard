@@ -93,15 +93,29 @@ pnpm --version
 npm install --global pnpm@10.15.0
 ```
 
-### 方式一:npm 固定版本(推荐)
+### 方式一:npm 发布包(推荐)
 
-无需克隆仓库,直接安装发布包:
+无需克隆仓库,直接安装发布包。安装时记不记“版本范围”决定以后升级是否省心,两种都支持,按需二选一:
+
+#### 方式一 A:跟随更新(默认推荐,升级最方便)
+
+```sh
+dsh plugin --profile web add deepseek-harness-usage-dashboard
+```
+
+不写死版本号时,pnpm 会按 `^1.1.0` 这类范围记录。以后要升级,一条命令即可跟随到最新 1.x:
+
+```sh
+dsh plugin --profile web update deepseek-harness-usage-dashboard
+```
+
+#### 方式一 B:固定版本(可复现)
 
 ```sh
 dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
 ```
 
-这里特意固定为 `1.1.0`,避免未来发布版本后安装结果发生变化。
+这里特意固定为 `1.1.0`,避免未来发布新版本后安装结果发生变化;升级时需要把版本号换成新版本,重新执行上面的命令。
 
 ### 方式二:GitHub Release `.tgz`(npm 不可用或受 pnpm 完整性策略限制时)
 
@@ -145,6 +159,25 @@ dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
 4. 回到 Harness,打开右下角仪表盘 → ⚙️ 设置 → 粘贴 → 「验证并保存」。保存成功后只会显示脱敏值。
 
 请勿把 `userToken` 粘贴到终端、聊天、Issue、截图或安装日志中。高级用户也可在启动 Harness 前设置 `DEEPSEEK_PLATFORM_TOKEN`,但命令行历史可能保存明文,因此面板粘贴方式更安全。
+
+## 升级
+
+插件发布新版本后,按你的安装方式执行对应命令,然后回到原工作目录重启 `dsh web` 并强制刷新页面:
+
+| 安装方式 | 升级到最新 |
+|---|---|
+| npm 跟随更新(方式一 A) | `dsh plugin --profile web update deepseek-harness-usage-dashboard` |
+| npm 固定版本(方式一 B) | `dsh plugin --profile web add deepseek-harness-usage-dashboard@<新版本号>` |
+| GitHub Release `.tgz`(方式二) | 从 Release 重新下载新的 `.tgz`,再执行 `dsh plugin --profile web add "file:…"` 重装 |
+| 固定标签源码(方式三) | `git fetch --tags && git checkout v<新版本>`,再重新 `add` |
+
+先查看是否有新版本:
+
+```sh
+dsh plugin --profile web outdated
+```
+
+> 采用「方式一 A(跟随更新)」时,`update` 会自动升到最新 1.x;采用「方式一 B(固定版本)」时,`update` 不会越级,需把版本号显式换成新版本——这是可复现性的取舍。
 
 ## 常见安装问题
 

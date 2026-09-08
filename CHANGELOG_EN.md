@@ -14,6 +14,13 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 | `1.0.0` | Declared the stable release and clarified DeepSeek-only billing scope |
 | `0.1.0` | First feature release with the balance pill, usage panel, token management, and refresh strategy |
 
+## [Unreleased]
+
+### Installation & docs
+
+- README (CN/EN): split the npm install into “Option 1A: track updates (default, easiest upgrades)” and “Option 1B: pinned version (reproducible)”, and added an “Upgrading” section listing per-method upgrade commands plus the `dsh plugin --profile web outdated` check
+- README (CN/EN): added a v1.1.0 “Screenshots” gallery (`docs/images`, 5 images)
+
 ## [1.1.0] - 2026-09-08
 
 ### Added
