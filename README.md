@@ -14,6 +14,21 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 ![DeepSeek Harness 用量仪表盘效果预览(v1.1.0)](./docs/images/usage-dashboard-preview.png)
 
+## 界面截图
+
+主预览见上方「效果预览」;以下为各功能特写:
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-pill.png" width="300" alt="关闭的余额角标(谷时)"><br><sub>关闭的余额角标(谷时)</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel.png" width="300" alt="展开面板(谷时)"><br><sub>展开面板(谷时)</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-detail.png" width="150" alt="面板竖版特写"><br><sub>面板竖版特写</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-peak.png" width="150" alt="峰时形态与热力图悬停浮卡"><br><sub>峰时形态 + 热力图悬停浮卡</sub></td>
+  </tr>
+</table>
+
 ## 功能
 
 - **余额角标**:右下角一枚胶囊实时显示账户余额;当前为**峰时/谷时**时,边框呈现琥珀呼吸光 / 绿色静光;点击展开面板,点击面板外任意处或角标即可关闭(打开/关闭均带 160ms 淡入淡出)

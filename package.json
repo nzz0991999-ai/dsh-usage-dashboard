@@ -31,6 +31,7 @@
   "files": [
     "src",
     "client",
+    "docs/images",
     "cordis.patch.yml",
     "README.md",
     "README_EN.md",

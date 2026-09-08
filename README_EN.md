@@ -14,6 +14,21 @@ After installation and configuration, the bottom-right balance pill expands into
 
 ![DeepSeek Harness usage dashboard preview (v1.1.0)](./docs/images/usage-dashboard-preview.png)
 
+## Screenshots
+
+The hero preview is above; here are close-ups of individual features:
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-pill.png" width="300" alt="Closed balance pill (valley hours)"><br><sub>Closed balance pill (valley hours)</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel.png" width="300" alt="Expanded panel (valley hours)"><br><sub>Expanded panel (valley hours)</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-detail.png" width="150" alt="Panel detail view"><br><sub>Panel detail view</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-peak.png" width="150" alt="Peak-hours state with heatmap tooltip"><br><sub>Peak-hours state + heatmap tooltip</sub></td>
+  </tr>
+</table>
+
 ## Features
 
 - **Balance pill**: a compact capsule in the bottom-right corner showing the live balance; during **peak hours** its border glows amber with a soft pulse, during valley hours it glows green; click to open the panel, and click anywhere outside (or the pill again) to close — both open and close animate with a 160 ms fade
