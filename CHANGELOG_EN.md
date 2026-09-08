@@ -23,7 +23,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 
 ### Fixed
 
-- **Invisible button text in dark mode**: `.dshud_btn_danger` (“Clear saved token”) and error text no longer rely on `--dsw-alias-state-error-primary`, which can darken with the theme; the color is now a fixed, readable red `#ef4444` in both themes
+- **Invisible button text in dark mode**: `.dshud_btn_danger` (“Clear saved token”) and error text no longer rely on `--dsw-alias-state-error-primary`, which can darken with the theme; the color is now a fixed, readable red `#ef4444` in both themes. The primary “Verify & save” button now uses a hard-coded brand-blue `#2563eb` background with white text (no theme variables that flip brightness), so its label is legible in both light and dark modes
 - **userToken onboarding text clarified**: the settings hint is now split into “Get it” + “Security” so beginners can follow along and professionals get a concise reference; EN/CN updated
 
 ### Installation & docs

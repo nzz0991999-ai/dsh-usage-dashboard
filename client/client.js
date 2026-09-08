@@ -93,7 +93,7 @@ window.__ModuleLoader__.load({
 				".dshud_input:focus{border-color:var(--dsw-alias-brand-primary,#3b82f6);box-shadow:0 0 0 2px rgba(59,130,246,0.2)}",
 				".dshud_btnrow{display:flex;gap:8px;justify-content:flex-end;margin-top:2px}",
 				".dshud_btn{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:5px;transition:all .15s ease}",
-				".dshud_btn_primary{background:var(--dsw-alias-button-primary-fill,#3b82f6);color:var(--dsw-alias-button-contrast-fill,#ffffff)}",
+				".dshud_btn_primary{background:#2563eb;color:#ffffff}",
 				".dshud_btn_primary:hover{filter:brightness(1.1)}",
 				".dshud_btn_primary:disabled{opacity:.5;cursor:default;filter:none}",
 				".dshud_btn_ghost{background:transparent;border-color:var(--dsw-alias-border-l2,rgba(128,128,128,0.25));color:var(--dsw-alias-label-secondary)}",
