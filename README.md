@@ -6,13 +6,13 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 > **适用范围:**本插件仅查询 DeepSeek 官方 API 与 DeepSeek Platform 的账户余额、用量和扣费数据。即使 Harness 配置了其他模型供应商,本插件也不会读取相应供应商的账单;此时面板可能继续显示 DeepSeek 数据、显示不可用或报错,均不代表当前模型供应商的真实余额或花费。
 
-当前稳定版本为 `1.1.0`,完整的小版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
+当前稳定版本为 `1.1.1`,完整的小版本变更见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 效果预览
 
 安装并配置后,右下角余额角标可展开为完整的 DeepSeek 用量仪表盘(峰谷横幅、今日/本月指标、用量热力图与模型分布环形图):
 
-![DeepSeek Harness 用量仪表盘效果预览(v1.1.0)](./docs/images/usage-dashboard-preview.png)
+![DeepSeek Harness 用量仪表盘效果预览(v1.1.1)](./docs/images/usage-dashboard-preview.png)
 
 ## 界面截图
 
@@ -103,7 +103,7 @@ npm install --global pnpm@10.15.0
 dsh plugin --profile web add deepseek-harness-usage-dashboard
 ```
 
-不写死版本号时,pnpm 会按 `^1.1.0` 这类范围记录。以后要升级,一条命令即可跟随到最新 1.x:
+不写死版本号时,pnpm 会按 `^1.1.1` 这类范围记录。以后要升级,一条命令即可跟随到最新 1.x:
 
 ```sh
 dsh plugin --profile web update deepseek-harness-usage-dashboard
@@ -112,30 +112,30 @@ dsh plugin --profile web update deepseek-harness-usage-dashboard
 #### 方式一 B:固定版本(可复现)
 
 ```sh
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
 ```
 
-这里特意固定为 `1.1.0`,避免未来发布新版本后安装结果发生变化;升级时需要把版本号换成新版本,重新执行上面的命令。
+这里特意固定为 `1.1.1`,避免未来发布新版本后安装结果发生变化;升级时需要把版本号换成新版本,重新执行上面的命令。
 
 ### 方式二:GitHub Release `.tgz`(npm 不可用或受 pnpm 完整性策略限制时)
 
-请先从 [v1.1.0 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.1.0) 下载 `.tgz`,再用本地 `file:` 路径安装。这样 pnpm 可以把 tarball 固定写入 Profile 锁文件:
+请先从 [v1.1.1 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.1.1) 下载 `.tgz`,再用本地 `file:` 路径安装。这样 pnpm 可以把 tarball 固定写入 Profile 锁文件:
 
 ```powershell
-dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz"
-Get-FileHash "C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz" -Algorithm SHA256
+dsh plugin --profile web add "file:C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.1.1.tgz"
+Get-FileHash "C:/Users/你的用户名/Downloads/deepseek-harness-usage-dashboard-1.1.1.tgz" -Algorithm SHA256
 ```
 
 SHA-256 应与 Release 页面公布的值一致。远程 URL 也可直接尝试:
 
 ```sh
-dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.1.0/deepseek-harness-usage-dashboard-1.1.0.tgz
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.1.1/deepseek-harness-usage-dashboard-1.1.1.tgz
 ```
 
 ### 方式三:固定标签的本地源码(开发者)
 
 ```sh
-git clone --branch v1.1.0 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+git clone --branch v1.1.1 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
 dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 ```
 
@@ -210,7 +210,7 @@ macOS/Linux 可用 `lsof -nP -iTCP:3080 -sTCP:LISTEN` 查看进程,确认后执�
 
 ```sh
 dsh plugin --profile web remove dsh-usage-dashboard
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
 ```
 
 ### 安装后没有角标
@@ -231,6 +231,8 @@ dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
     apiKeyRef: DEEPSEEK_API_KEY    # 官方余额用的凭据引用名
     taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
     peakWindows: [09:00-12:00, 14:00-18:00]   # 峰时窗口(HH:MM-HH:MM, 北京时间)
+    checkUpdate: true               # 是否检查 npm 新版本(仅提示, 不自动安装)
+    updateCheckIntervalMs: 21600000 # 检查新版本的频率(ms), 默认 6 小时
 ```
 
 ## 卸载

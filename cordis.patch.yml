@@ -9,6 +9,8 @@
 #       historyMonths: 6               # 面板可回看的月数
 #       taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
 #       peakWindows: [09:00-12:00, 14:00-18:00]   # 峰时窗口(HH:MM-HH:MM, 北京时间)
+#       checkUpdate: true                  # 是否检查 npm 新版本(仅提示, 不自动安装)
+#       updateCheckIntervalMs: 21600000     # 检查新版本的频率(ms), 默认 6 小时
 - insert:
     - id: dsh-usage-dashboard
       name: deepseek-harness-usage-dashboard

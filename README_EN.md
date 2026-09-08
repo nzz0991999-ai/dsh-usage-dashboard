@@ -6,13 +6,13 @@ A usage dashboard plugin for [DeepSeek Harness](https://github.com/deepseek-ai/d
 
 > **Scope:** This plugin queries only balance, usage, and billing data from the official DeepSeek API and DeepSeek Platform. Even if Harness is configured with another model provider, the plugin does not read that provider's billing data. The panel may continue to show DeepSeek data, show an unavailable state, or report an error; none of these represent the current model provider's actual balance or cost.
 
-The current stable version is `1.1.0`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) for the changes in every version.
+The current stable version is `1.1.1`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) for the changes in every version.
 
 ## Preview
 
 After installation and configuration, the bottom-right balance pill expands into the full DeepSeek usage dashboard (peak/valley banner, today/this-month metrics, usage heatmap, and model donut):
 
-![DeepSeek Harness usage dashboard preview (v1.1.0)](./docs/images/usage-dashboard-preview.png)
+![DeepSeek Harness usage dashboard preview (v1.1.1)](./docs/images/usage-dashboard-preview.png)
 
 ## Screenshots
 
@@ -102,7 +102,7 @@ No repository clone is required. Whether future upgrades are one command away de
 dsh plugin --profile web add deepseek-harness-usage-dashboard
 ```
 
-Without a fixed version, pnpm records a range such as `^1.1.0`. Later, a single command tracks the newest 1.x:
+Without a fixed version, pnpm records a range such as `^1.1.1`. Later, a single command tracks the newest 1.x:
 
 ```sh
 dsh plugin --profile web update deepseek-harness-usage-dashboard
@@ -111,30 +111,30 @@ dsh plugin --profile web update deepseek-harness-usage-dashboard
 #### Option 1B: pinned version (reproducible)
 
 ```sh
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
 ```
 
-The explicit `1.1.0` keeps the installation reproducible when later versions are released. To upgrade, re-run the command with the new version number.
+The explicit `1.1.1` keeps the installation reproducible when later versions are released. To upgrade, re-run the command with the new version number.
 
 ### Option 2: GitHub Release `.tgz` (when npm is unavailable or pnpm integrity policy blocks a URL)
 
-Download the `.tgz` from the [v1.1.0 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.1.0), then install it with a local `file:` path. This lets pnpm record the tarball in the Profile lockfile:
+Download the `.tgz` from the [v1.1.1 Release](https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/tag/v1.1.1), then install it with a local `file:` path. This lets pnpm record the tarball in the Profile lockfile:
 
 ```powershell
-dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz"
-Get-FileHash "C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.1.0.tgz" -Algorithm SHA256
+dsh plugin --profile web add "file:C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.1.1.tgz"
+Get-FileHash "C:/Users/your-name/Downloads/deepseek-harness-usage-dashboard-1.1.1.tgz" -Algorithm SHA256
 ```
 
 The SHA-256 must match the value published on the Release page. You may also try the remote URL directly:
 
 ```sh
-dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.1.0/deepseek-harness-usage-dashboard-1.1.0.tgz
+dsh plugin --profile web add https://github.com/nzz0991999-ai/dsh-usage-dashboard/releases/download/v1.1.1/deepseek-harness-usage-dashboard-1.1.1.tgz
 ```
 
 ### Option 3: pinned local source (developers)
 
 ```sh
-git clone --branch v1.1.0 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
+git clone --branch v1.1.1 --depth 1 https://github.com/nzz0991999-ai/dsh-usage-dashboard
 dsh plugin --profile web add "file:$(pwd)/dsh-usage-dashboard"
 ```
 
@@ -209,7 +209,7 @@ A local directory installed as a `link:` dependency may omit dependencies. Remov
 
 ```sh
 dsh plugin --profile web remove dsh-usage-dashboard
-dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.0
+dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
 ```
 
 ### No balance pill after installation
@@ -230,6 +230,8 @@ Write into `$DSH_HOME/profiles/web/cordis.patch.yml`:
     apiKeyRef: DEEPSEEK_API_KEY    # credential reference for the official balance
     taskRefreshCooldownMs: 60000   # min cooldown of the task-completion refresh (ms)
     peakWindows: [09:00-12:00, 14:00-18:00]   # peak windows (HH:MM-HH:MM, Beijing time)
+    checkUpdate: true               # check npm for a newer version (hint only, never auto-installs)
+    updateCheckIntervalMs: 21600000 # how often to check for updates (ms), default 6 h
 ```
 
 ## Uninstall

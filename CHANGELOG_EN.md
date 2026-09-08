@@ -8,18 +8,30 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 
 | Version | Focus |
 |---|---|
+| `1.1.1` | In-panel update hint (queries npm latest, hint only), fixed invisible dark-mode button text, clarified the userToken onboarding text |
 | `1.1.0` | Major UI overhaul: usage heatmap, model donut (day/week/month + period browsing), 3×2 metric grid, peak/valley glow, outside-click close & fade animations, and “cost” → “amount” wording |
 | `1.0.2` | Fixes the browser bundle registration ID after the npm rename and adds CI/install safeguards |
 | `1.0.1` | Renamed the npm package, removed `zod`, and added Windows install/troubleshooting docs; superseded by `1.0.2` |
 | `1.0.0` | Declared the stable release and clarified DeepSeek-only billing scope |
 | `0.1.0` | First feature release with the balance pill, usage panel, token management, and refresh strategy |
 
-## [Unreleased]
+## [1.1.1] - 2026-09-08
+
+### Added
+
+- **In-panel “new version” hint**: the host queries npm for the `deepseek-harness-usage-dashboard` latest version every `updateCheckIntervalMs` (default 6 h) and compares it to its own; the settings panel shows an upgrade hint (`dsh plugin --profile web update deepseek-harness-usage-dashboard`) when a newer release exists. Hint only — never auto-installed; network failures are silently ignored; disable via `checkUpdate`
+
+### Fixed
+
+- **Invisible button text in dark mode**: `.dshud_btn_danger` (“Clear saved token”) and error text no longer rely on `--dsw-alias-state-error-primary`, which can darken with the theme; the color is now a fixed, readable red `#ef4444` in both themes
+- **userToken onboarding text clarified**: the settings hint is now split into “Get it” + “Security” so beginners can follow along and professionals get a concise reference; EN/CN updated
 
 ### Installation & docs
 
 - README (CN/EN): split the npm install into “Option 1A: track updates (default, easiest upgrades)” and “Option 1B: pinned version (reproducible)”, and added an “Upgrading” section listing per-method upgrade commands plus the `dsh plugin --profile web outdated` check
-- README (CN/EN): added a v1.1.0 “Screenshots” gallery (`docs/images`, 5 images)
+- README (CN/EN): added a v1.1.1 “Screenshots” gallery (`docs/images`, 5 images)
+- README (CN/EN) and `cordis.patch.yml`: documented the `checkUpdate` and `updateCheckIntervalMs` options
+- Current stable version bumped to `1.1.1`
 
 ## [1.1.0] - 2026-09-08
 

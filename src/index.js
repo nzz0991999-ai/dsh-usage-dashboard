@@ -41,6 +41,10 @@ export const Config = Schema.object({
   taskRefreshCooldownMs: Schema.number().min(5000).default(60000),
   /** 峰时窗口列表("HH:MM-HH:MM", 北京时间); 其余时间为谷时 */
   peakWindows: Schema.array(Schema.string()).default(['09:00-12:00', '14:00-18:00']),
+  /** 是否检查 npm 上是否有新版本(仅提示, 不自动安装) */
+  checkUpdate: Schema.boolean().default(true),
+  /** 检查新版本的频率(ms) */
+  updateCheckIntervalMs: Schema.number().min(60000).default(21600000),
 })
 
 // ---------------------------------------------------------------------------
@@ -257,6 +261,8 @@ export function apply(ctx, config) {
     peakWindows: Array.isArray(config.peakWindows) && config.peakWindows.length > 0
       ? [...config.peakWindows]
       : ['09:00-12:00', '14:00-18:00'],
+    checkUpdate: config.checkUpdate !== false,
+    updateCheckIntervalMs: config.updateCheckIntervalMs ?? 21600000,
   }
 
   // ---- userToken 持久化($DSH_HOME/storages/dsh-usage-dashboard.secret, 0600) ----
@@ -430,6 +436,53 @@ export function apply(ctx, config) {
     return task
   }
 
+  // ---- 版本更新检查(仅提示, 不自动升级; 只访问 npm 官方元数据端点, 无遥测) ----
+  let updateInfo = { state: 'empty', currentVersion: '', latestVersion: null, hasNewer: false, error: null, checkedAt: 0 }
+  let inflightUpdate = null
+  let ownVersionPromise = null
+  let updateTimer = null
+  const getOwnVersion = () => {
+    if (ownVersionPromise === null) {
+      ownVersionPromise = fsp.readFile(new URL('../package.json', import.meta.url), 'utf8')
+        .then((raw) => { try { return JSON.parse(raw).version || '' } catch { return '' } })
+        .catch(() => '')
+    }
+    return ownVersionPromise
+  }
+  const cmpVersion = (a, b) => {
+    const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0)
+    const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0)
+    for (let i = 0; i < 3; i += 1) {
+      const x = pa[i] ?? 0
+      const y = pb[i] ?? 0
+      if (x > y) return 1
+      if (x < y) return -1
+    }
+    return 0
+  }
+  const checkForUpdate = () => {
+    if (!runtimeConfig.checkUpdate) return Promise.resolve()
+    if (inflightUpdate !== null) return inflightUpdate
+    inflightUpdate = (async () => {
+      try {
+        const current = await getOwnVersion()
+        const data = await fetchJson('https://registry.npmjs.org/deepseek-harness-usage-dashboard/latest', { timeoutMs: Math.min(runtimeConfig.timeoutMs, 10000) })
+        const latest = typeof data?.version === 'string' ? data.version : null
+        const hasNewer = latest !== null && current !== '' && cmpVersion(latest, current) > 0
+        updateInfo = { state: 'ok', currentVersion: current, latestVersion: latest, hasNewer, error: null, checkedAt: Date.now() }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        updateInfo = { ...updateInfo, state: updateInfo.state === 'ok' ? 'ok' : 'error', error: message, checkedAt: updateInfo.checkedAt || Date.now() }
+      }
+    })().finally(() => { inflightUpdate = null })
+    return inflightUpdate
+  }
+  const resetUpdateTimer = () => {
+    if (updateTimer !== null) clearTimeout(updateTimer)
+    if (!runtimeConfig.checkUpdate) return
+    updateTimer = setTimeout(() => { void checkForUpdate(); resetUpdateTimer() }, runtimeConfig.updateCheckIntervalMs)
+  }
+
   const serializeStatus = () => {
     const { token, source } = getToken()
     const hasToken = token !== ''
@@ -462,6 +515,7 @@ export function apply(ctx, config) {
         code: month.code ?? null,
         fetchedAt: month.fetchedAt,
       },
+      update: { ...updateInfo },
     }
   }
 
@@ -517,9 +571,12 @@ export function apply(ctx, config) {
   ctx.effect(() => {
     void loadSecret().then(() => {
       resetLoop()
+      void checkForUpdate()
+      resetUpdateTimer()
     })
     return () => {
       if (loopTimer !== null) clearTimeout(loopTimer)
+      if (updateTimer !== null) clearTimeout(updateTimer)
     }
   }, 'dsh-usage-dashboard: refresh loop')
 
@@ -648,8 +705,12 @@ export function apply(ctx, config) {
             if (typeof body.timeoutMs === 'number' && body.timeoutMs >= 1000) runtimeConfig.timeoutMs = body.timeoutMs
             if (typeof body.historyMonths === 'number' && body.historyMonths >= 1 && body.historyMonths <= 24) runtimeConfig.historyMonths = body.historyMonths
             if (typeof body.taskRefreshCooldownMs === 'number' && body.taskRefreshCooldownMs >= 5000) runtimeConfig.taskRefreshCooldownMs = body.taskRefreshCooldownMs
+            if (typeof body.checkUpdate === 'boolean') runtimeConfig.checkUpdate = body.checkUpdate
+            if (typeof body.updateCheckIntervalMs === 'number' && body.updateCheckIntervalMs >= 60000) runtimeConfig.updateCheckIntervalMs = body.updateCheckIntervalMs
 
             if (tokenChanged || intervalChanged) resetLoop()
+            void checkForUpdate()
+            resetUpdateTimer()
             tick()
             sendJson(res, 200, { ok: true, tokenChanged, config: serializeStatus().config })
           } catch (err) {

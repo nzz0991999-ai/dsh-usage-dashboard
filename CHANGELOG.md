@@ -8,18 +8,30 @@
 
 | 版本 | 重点 |
 |---|---|
+| `1.1.1` | 版本更新提示(查 npm latest,仅提示)、修复深色模式按钮文字不可见、优化 userToken 获取说明 |
 | `1.1.0` | 界面大改:用量热力图、模型环形图(日/周/月+翻看)、指标 3×2 网格、峰谷显示与边框光效、面板交互(点击外部关闭/淡入淡出)、“花费”统一改“金额” |
 | `1.0.2` | 修复 npm 包名变更后的浏览器 bundle 注册 ID,补充一致性 CI 与稳定安装路径 |
 | `1.0.1` | 更换 npm 包名、移除 `zod`、补充 Windows 安装与排障文档；已被 `1.0.2` 替代 |
 | `1.0.0` | 宣布稳定版本,明确仅支持 DeepSeek 官方余额、用量和扣费数据 |
 | `0.1.0` | 首个功能版本,提供余额角标、用量面板、Token 管理和刷新机制 |
 
-## [Unreleased]
+## [1.1.1] - 2026-09-08
+
+### 新增
+
+- **面板“发现新版本”提示**:宿主端按 `updateCheckIntervalMs`(默认 6 小时)查询 npm 上 `deepseek-harness-usage-dashboard` 的 latest 版本并与自身比较;设置面板在发现新版本时提示升级命令(`dsh plugin --profile web update deepseek-harness-usage-dashboard`)。仅提示,绝不自动安装;网络失败静默忽略;可用 `checkUpdate` 关闭
+
+### 修复
+
+- **深色模式下按钮文字不可见**:`.dshud_btn_danger`(清除已保存的 token)与错误提示的颜色不再依赖可能随主题变暗的 `--dsw-alias-state-error-primary`,改用两种主题下都清晰的固定红色 `#ef4444`
+- **userToken 提示文案优化**:设置面板的获取说明改为分步骤(「获取」+「安全」),新手可照做、专业用户也更清晰;中英文案同步更新
 
 ### 安装与文档
 
 - README(中/英):npm 安装方式拆为「方式一 A:跟随更新(默认,升级最方便)」与「方式一 B:固定版本(可复现)」,并新增「升级」章节,列出各安装路径的升级命令与 `dsh plugin --profile web outdated` 检查方法
-- README(中/英):新增 v1.1.0 实机「界面截图 / Screenshots」组(图存于 `docs/images`,共 5 张)
+- README(中/英):新增 v1.1.1 实机「界面截图 / Screenshots」组(图存于 `docs/images`,共 5 张)
+- README(中/英)与 `cordis.patch.yml`:补充 `checkUpdate`、`updateCheckIntervalMs` 配置说明
+- 当前稳定版本同步为 `1.1.1`
 
 ## [1.1.0] - 2026-09-08
 
