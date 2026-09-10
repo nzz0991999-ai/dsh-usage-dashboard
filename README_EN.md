@@ -148,15 +148,26 @@ dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
 
 After installation, return to the **same workspace directory** from which you normally start Harness, restart `dsh web`, and refresh the page. The bottom-right balance pill confirms success. Starting from another directory may select a different Harness workspace or fail because port `3080` is already in use.
 
-#### Local development loop (dev-install.sh)
+#### Local development loop
 
-pnpm installs a `file:` directory as a **copy** (not a symlink), so editing the source does not change what is already installed. The `dev-install.sh` script at the repository root reinstalls the current source into the local `web` profile in one step — run it after every code change:
+On a development machine, mount the plugin with `link:`. That is a **real symlink**, so source edits and newly added files reach the profile immediately — no reinstall after each change.
+
+First install the plugin's own dependencies. A `link:` dependency uses the plugin directory's own `node_modules`, and pnpm does **not** install them for you, so this step is required:
 
 ```sh
-./dev-install.sh
+cd /path/to/dsh-usage-dashboard
+pnpm install
 ```
 
-Then stop and restart `dsh web` and hard-refresh the page (Cmd/Ctrl+Shift+R). The script runs `remove` then `add`, and is meant for your own development machine (macOS/Linux); on Windows run the `remove` + `add` commands above manually. For end users' machines, use the npm / Release methods and follow the “Upgrading” section.
+Then link it into the `web` profile (use an absolute path):
+
+```sh
+dsh plugin --profile web add "link:$PWD"
+```
+
+After each code change, just stop and restart `dsh web` and hard-refresh the page (Cmd/Ctrl+Shift+R); the `add` command above does not need to be repeated.
+
+> The `file:` / npm / Release methods in the Installation section above are for end users: they install the plugin as a released artifact and are upgraded via the “Upgrading” section. `link:` is for your own development machine only.
 
 ### Configure DeepSeek Platform userToken
 

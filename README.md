@@ -149,15 +149,26 @@ dsh plugin --profile web add "file:F:/path/to/dsh-usage-dashboard"
 
 安装完成后,回到你平时启动 Harness 的**同一个工作目录**,重启 `dsh web` 并刷新页面。右下角出现余额角标即安装成功。不要从另一个目录重复启动,否则 Harness 可能使用不同的工作区,或因 `3080` 端口已被占用而启动失败。
 
-#### 本地开发循环(dev-install.sh)
+#### 本地开发循环
 
-pnpm 会把 `file:` 目录安装成**副本**(而非符号链接),所以修改源码后,已安装的插件不会自动跟着变。仓库根目录的 `dev-install.sh` 会把当前源码一键重装进本机 `web` profile——每次改完代码执行一次即可:
+开发机请用 `link:` 挂载:它是**真符号链接**,源码改动与新增文件都会立即反映到 profile,不需要在每次改动后重装。
+
+先安装插件自身依赖——`link:` 依赖使用插件目录自己的 `node_modules`,pnpm **不会**代装,这一步不能跳过:
 
 ```sh
-./dev-install.sh
+cd /path/to/dsh-usage-dashboard
+pnpm install
 ```
 
-然后停止并重启 `dsh web`,再对浏览器页面做一次硬刷新(Cmd/Ctrl+Shift+R)。脚本会先 `remove` 再 `add`,适合你自己的开发机(macOS/Linux);Windows 请手动执行上面的 `remove` + `add`。分发给最终用户的机器请使用 npm / Release 方式,并按「升级」章节更新。
+再把它链接进 `web` profile(用绝对路径):
+
+```sh
+dsh plugin --profile web add "link:$PWD"
+```
+
+之后每次改完代码,只需停止并重启 `dsh web`,再对页面做一次硬刷新(Cmd/Ctrl+Shift+R);无需再执行上面的 `add`。
+
+> 上面「安装」章节给最终用户的 `file:` / npm / Release 方式与此不同:那些方式把插件作为发布件安装,升级走「升级」章节。`link:` 只适合你自己的开发机。
 
 ### 配置 DeepSeek Platform userToken
 
