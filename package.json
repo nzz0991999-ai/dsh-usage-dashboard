@@ -44,7 +44,8 @@
   "scripts": {
     "test": "node --input-type=module -e \"await import('./src/index.js'); console.log('host import ok')\"",
     "pack:check": "npm pack --dry-run",
-    "verify:package": "node scripts/verify-package.mjs"
+    "verify:package": "node scripts/verify-package.mjs",
+    "release": "bash scripts/release.sh"
   },
   "dsh": {
     "bundle": {

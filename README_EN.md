@@ -265,6 +265,35 @@ Write into `$DSH_HOME/profiles/web/cordis.patch.yml`:
     updateCommand: dsh plugin --profile web update deepseek-harness-usage-dashboard  # command copied by the footer badge
 ```
 
+## Release process (maintainers)
+
+Write and commit the section for the target version in **both changelogs**
+(`CHANGELOG.md` in Chinese and `CHANGELOG_EN.md` in English) first — that section is
+the single source for the GitHub Release body. Then one command does the rest:
+
+```bash
+npm run release -- 1.3.0 "short summary"
+```
+
+`scripts/release.sh` performs, in order:
+
+1. **Preflight**: on `main`, in sync with `origin/main`, clean tree, `gh` logged in, version increases, tag unused, both changelogs contain the version section
+2. **Local checks**: `npm test` + `node --check client/client.js` + `verify:package`
+3. **Commit**: bump `package.json` → commit `release: vX.Y.Z <summary>` → push
+4. **Tag**: annotated tag `vX.Y.Z` → push
+5. **Release**: compose the body from the changelog sections (Chinese + collapsed English + compare link) → `gh release create --verify-tag`
+6. **npm hint**: with `--publish` it also runs `npm publish --access public` (an account requiring 2FA needs an interactive terminal for the OTP)
+
+| Flag | Effect |
+|---|---|
+| `--dry-run` | Validate and preview the plan and the release body, **changing nothing** |
+| `--yes` | Skip the confirmation prompt (scripted/CI use) |
+| `--skip-checks` | Skip the local checks in step 2 |
+| `--publish` | Actually run `npm publish` in step 6 |
+| `--branch <name>` | Release from a branch other than `main` |
+
+> The script never does anything destructive: no history rewrite, no `--force`, no automatic changelog commits. A non-increasing version, an existing tag, or a dirty tree aborts immediately.
+
 ## Uninstall
 
 ```sh

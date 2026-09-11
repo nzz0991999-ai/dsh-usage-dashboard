@@ -265,6 +265,34 @@ dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
     updateCommand: dsh plugin --profile web update deepseek-harness-usage-dashboard  # 页脚徽标一键复制的升级命令
 ```
 
+## 发布流程(维护者)
+
+发版前先把**两份 CHANGELOG** 里对应版本的小节写好并提交(中文 `CHANGELOG.md` + 英文 `CHANGELOG_EN.md`),
+它是 GitHub Release 正文的唯一来源;然后一条命令完成剩下的全部动作:
+
+```bash
+npm run release -- 1.3.0 "简短摘要"
+```
+
+`scripts/release.sh` 会依次:
+
+1. **前提校验**:在 `main`、与 `origin/main` 同步、工作区干净、`gh` 已登录、版本号递增、tag 未被占用、两份 CHANGELOG 都有该版本小节
+2. **本地校验**:`npm test` + `node --check client/client.js` + `verify:package`
+3. **提交**:`package.json` 改版本 → `release: vX.Y.Z <摘要>` → 推送
+4. **打标**:注解 tag `vX.Y.Z` → 推送
+5. **发 Release**:用 CHANGELOG 小节合成正文(中文 + 折叠的英文 + compare 链接)→ `gh release create --verify-tag`
+6. **提示发布 npm**:加 `--publish` 则继续执行 `npm publish --access public`(账号要求 2FA 时需在交互式终端输入 OTP)
+
+| 参数 | 作用 |
+|---|---|
+| `--dry-run` | 只做校验并预览将要执行的动作与 Release 正文,**不改动任何东西** |
+| `--yes` | 跳过确认提示(脚本化/CI 调用) |
+| `--skip-checks` | 跳过第 2 步的本地校验 |
+| `--publish` | 第 6 步真的执行 `npm publish` |
+| `--branch <name>` | 指定发布分支(默认 `main`) |
+
+> 脚本**不会**做危险操作:不改写历史、不 `--force`、不自动提交 CHANGELOG;版本号未递增、tag 已存在、工作区不干净等情况一律直接终止。
+
 ## 卸载
 
 ```sh
