@@ -80,28 +80,63 @@ ok "分支: $BRANCH"
 $(git status --short)"
 ok "工作区干净"
 
-git fetch --quiet origin "$BRANCH"
-[ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$BRANCH")" ] || die "本地与 origin/$BRANCH 不一致, 请先 pull/push"
-ok "与 origin/$BRANCH 同步"
+if ! git fetch --quiet origin "$BRANCH"; then
+  die "无法连接远端 origin (git fetch origin $BRANCH 失败), 请检查网络/VPN 后重试; 本次未做任何改动"
+fi
+# 允许"本地领先"(CHANGELOG 已提交但未推): 这些提交会随发布一起推上去;
+# 但 origin 有本地没有的提交时必须先同步, 否则可能覆盖别人的工作。
+git merge-base --is-ancestor "origin/$BRANCH" HEAD || die "本地与 origin/$BRANCH 已分叉(远端有本地没有的提交), 请先 git pull --rebase"
+PENDING="$(git rev-list --count "origin/$BRANCH..HEAD")"
+if [ "$PENDING" -gt 0 ]; then
+  ok "与 origin/$BRANCH 无分叉 (有 $PENDING 个待推送提交, 会一并推上去)"
+else
+  ok "与 origin/$BRANCH 同步"
+fi
 
 gh auth status >/dev/null 2>&1 || die "gh 未登录, 请先 gh auth login"
 ok "gh 已登录"
 
-node -e '
-  const [cur, next] = process.argv.slice(1);
-  const p = (v) => v.split(".").map(Number);
-  const [a, b] = [p(next), p(cur)];
-  for (let i = 0; i < 3; i += 1) {
-    if (a[i] > b[i]) process.exit(0);
-    if (a[i] < b[i]) process.exit(1);
-  }
-  process.exit(1);
-' "$CURRENT" "$VERSION" || die "新版本 $VERSION 必须大于当前版本 $CURRENT"
-ok "版本递增: $CURRENT → $VERSION"
+# 续跑检测: HEAD 已经是本版本的发布提交(例如上次发布在推送阶段因网络失败)时,
+# 跳过"改版本+提交", 直接继续推送/tag/Release, 且每一步都幂等。
+RESUME=0
+LAST_SUBJECT="$(git log -1 --format=%s)"
+if [ "$CURRENT" = "$VERSION" ]; then
+  case "$LAST_SUBJECT" in
+    "release: $TAG"*) RESUME=1 ;;
+  esac
+fi
 
-git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && die "本地已存在 tag $TAG"
-git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1 && die "远程已存在 tag $TAG"
-ok "tag $TAG 未被占用"
+if [ "$RESUME" -eq 1 ]; then
+  ok "检测到 HEAD 已是 $TAG 的发布提交, 从推送阶段继续"
+else
+  node -e '
+    const [cur, next] = process.argv.slice(1);
+    const p = (v) => v.split(".").map(Number);
+    const [a, b] = [p(next), p(cur)];
+    for (let i = 0; i < 3; i += 1) {
+      if (a[i] > b[i]) process.exit(0);
+      if (a[i] < b[i]) process.exit(1);
+    }
+    process.exit(1);
+  ' "$CURRENT" "$VERSION" || die "新版本 $VERSION 必须大于当前版本 $CURRENT"
+  ok "版本递增: $CURRENT → $VERSION"
+fi
+
+if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+  [ "$(git rev-list -n1 "$TAG")" = "$(git rev-parse HEAD)" ] || die "本地已存在 tag $TAG 且不指向当前 HEAD, 请人工处理"
+  ok "本地 tag $TAG 已存在且指向 HEAD (继续)"
+else
+  ok "本地 tag $TAG 未被占用"
+fi
+
+REMOTE_TAG_SHA="$(git ls-remote --tags origin "refs/tags/$TAG" 2>/dev/null | awk '{print $1}')"
+if [ -z "$REMOTE_TAG_SHA" ]; then
+  ok "远程 tag $TAG 未被占用"
+elif [ "$REMOTE_TAG_SHA" = "$(git rev-parse HEAD)" ]; then
+  ok "远程 tag $TAG 已存在且指向 HEAD (继续)"
+else
+  die "远程已存在 tag $TAG 且指向 $REMOTE_TAG_SHA, 与当前 HEAD 不同, 请人工处理"
+fi
 
 for f in CHANGELOG.md CHANGELOG_EN.md; do
   grep -q "^## \[$VERSION\]" "$f" || die "$f 缺少小节 \"## [$VERSION] - <日期>\"; 请先写好并提交, 它同时是 Release 正文来源"
@@ -163,12 +198,16 @@ fi
 
 # ---------- 4. 预览 / 确认 ----------
 step "即将执行"
+if [ "$RESUME" -eq 1 ]; then
+  echo "  (续跑: 改版本与提交已完成, 跳过)"
+else
+  echo "  1) package.json: $CURRENT → $VERSION"
+  echo "  2) git commit -m \"release: $TAG${SUMMARY:+ $SUMMARY}\""
+fi
 cat <<PLAN
-  1) package.json: $CURRENT → $VERSION
-  2) git commit -m "release: $TAG${SUMMARY:+ $SUMMARY}"
   3) git push origin $BRANCH
-  4) git tag -a $TAG 并推送
-  5) gh release create $TAG (标题: $TAG${SUMMARY:+ $SUMMARY})
+  4) git tag -a $TAG 并推送 (已存在且指向 HEAD 时跳过)
+  5) gh release create $TAG (已存在时跳过)
 $( [ "$DO_PUBLISH" -eq 1 ] && printf '  6) npm publish --access public\n' )
 PLAN
 
@@ -185,13 +224,18 @@ if [ "$ASSUME_YES" -eq 0 ]; then
 fi
 
 # ---------- 5. 改版本并提交 ----------
-step "更新版本号并提交"
-npm version "$VERSION" --no-git-tag-version --allow-same-version >/dev/null
-ok "package.json = $VERSION"
+if [ "$RESUME" -eq 1 ]; then
+  step "更新版本号并提交 (续跑: 已跳过)"
+  ok "package.json = $VERSION (提交 $(git rev-parse --short HEAD))"
+else
+  step "更新版本号并提交"
+  npm version "$VERSION" --no-git-tag-version --allow-same-version >/dev/null
+  ok "package.json = $VERSION"
 
-git add package.json
-git commit -q -m "release: $TAG${SUMMARY:+ $SUMMARY}"
-ok "提交 $(git rev-parse --short HEAD)"
+  git add package.json
+  git commit -q -m "release: $TAG${SUMMARY:+ $SUMMARY}"
+  ok "提交 $(git rev-parse --short HEAD)"
+fi
 
 step "推送提交"
 git push origin "$BRANCH"
@@ -199,16 +243,25 @@ ok "origin/$BRANCH 已更新"
 
 # ---------- 6. 打 tag ----------
 step "打 tag 并推送"
-git tag -a "$TAG" -m "$TAG${SUMMARY:+ $SUMMARY}"
+if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+  ok "tag $TAG 已存在且指向 HEAD, 跳过创建"
+else
+  git tag -a "$TAG" -m "$TAG${SUMMARY:+ $SUMMARY}"
+  ok "tag $TAG 已创建"
+fi
 git push origin "$TAG"
 ok "$TAG 已推送"
 
 # ---------- 7. 创建 GitHub Release ----------
 step "创建 GitHub Release"
-gh release create "$TAG" --verify-tag \
-  --title "$TAG${SUMMARY:+ $SUMMARY}" \
-  --notes-file "$NOTES"
-ok "Release 已发布"
+if gh release view "$TAG" >/dev/null 2>&1; then
+  ok "Release $TAG 已存在, 跳过创建"
+else
+  gh release create "$TAG" --verify-tag \
+    --title "$TAG${SUMMARY:+ $SUMMARY}" \
+    --notes-file "$NOTES"
+  ok "Release 已发布"
+fi
 
 # ---------- 8. 可选发布 npm ----------
 if [ "$DO_PUBLISH" -eq 1 ]; then

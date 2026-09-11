@@ -12,20 +12,39 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 
 安装并配置后,右下角余额角标可展开为完整的 DeepSeek 用量仪表盘(峰谷横幅、今日/本月指标、用量热力图与模型分布环形图):
 
-![DeepSeek Harness 用量仪表盘效果预览(v1.1.1)](./docs/images/usage-dashboard-preview.png)
+![DeepSeek Harness 用量仪表盘(深色主题 · 峰时 · 中文)](./docs/images/usage-dashboard-panel-zh-dark-peak.jpg)
 
 ## 界面截图
 
-主预览见上方「效果预览」;以下为各功能特写:
+**面板** —— 深色 / 浅色 × 中文 / English:
 
 <table>
   <tr>
-    <td align="center"><img src="./docs/images/usage-dashboard-pill.png" width="300" alt="关闭的余额角标(谷时)"><br><sub>关闭的余额角标(谷时)</sub></td>
-    <td align="center"><img src="./docs/images/usage-dashboard-panel.png" width="300" alt="展开面板(谷时)"><br><sub>展开面板(谷时)</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-zh-dark-peak.jpg" width="420" alt="深色主题 · 峰时 · 中文面板"><br><sub>深色 · 峰时 · 中文</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-en-dark-peak.jpg" width="420" alt="Dark theme · peak hour · English panel"><br><sub>深色 · 峰时 · English</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="./docs/images/usage-dashboard-detail.png" width="150" alt="面板竖版特写"><br><sub>面板竖版特写</sub></td>
-    <td align="center"><img src="./docs/images/usage-dashboard-peak.png" width="150" alt="峰时形态与热力图悬停浮卡"><br><sub>峰时形态 + 热力图悬停浮卡</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-zh-light-valley.jpg" width="420" alt="浅色主题 · 谷时 · 中文面板"><br><sub>浅色 · 谷时 · 中文</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-en-light-valley.jpg" width="420" alt="Light theme · valley hour · English panel"><br><sub>浅色 · 谷时 · English</sub></td>
+  </tr>
+</table>
+
+**余额角标** —— 峰时琥珀色呼吸光 / 谷时绿色静光:
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-pill-peak.jpg" width="360" alt="峰时角标:琥珀色呼吸光"><br><sub>峰时 · 琥珀色呼吸光</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-pill-valley.jpg" width="360" alt="谷时角标:绿色静光"><br><sub>谷时 · 绿色静光</sub></td>
+  </tr>
+</table>
+
+**升级提示** —— 检测到 npm 上有新版本时,页脚版本号变成可点击徽标,点一下复制升级命令:
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-update-panel.jpg" width="150" alt="有更新时的面板:页脚版本号变为升级徽标"><br><sub>有更新时的面板</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-update-badge.png" width="230" alt="升级徽标:当前版本 → 可用版本"><br><sub>徽标:当前版本 → 可用版本</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-update-copied.png" width="230" alt="点击后:已复制升级命令"><br><sub>点击后 · 已复制升级命令</sub></td>
   </tr>
 </table>
 

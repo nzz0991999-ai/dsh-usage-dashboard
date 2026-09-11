@@ -8,6 +8,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 
 | Version | Focus |
 |---|---|
+| `1.2.2` | Refreshed screenshots (dark/light × zh/en, pill states, update hint); screenshots no longer ship in the npm package, 1376 KB → 66 KB |
 | `1.2.1` | In-panel one-click update hint: the footer version becomes a clickable badge that copies the upgrade command; new `updateCommand` config |
 | `1.2.0` | Today-usage fix (the official usage page's own `by_api_key` endpoints, bucketed by the configured timezone, so “today” is no longer zero), `timezoneOffsetSec` config, in-panel language switch, heatmap collapsed by default, model legend showing amount and tokens together, English translation gaps closed and copy reworded, amounts following the account currency, footer version fixed |
 | `1.1.1` | In-panel update hint (queries npm latest, hint only), fixed invisible dark-mode button text, clarified the userToken onboarding text |
@@ -16,6 +17,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 | `1.0.1` | Renamed the npm package, removed `zod`, and added Windows install/troubleshooting docs; superseded by `1.0.2` |
 | `1.0.0` | Declared the stable release and clarified DeepSeek-only billing scope |
 | `0.1.0` | First feature release with the balance pill, usage panel, token management, and refresh strategy |
+
+## [1.2.2] - 2026-09-11
+
+### Changed
+
+- **Refreshed every README screenshot**: both READMEs now show 1.2.1-era captures — the panel in dark/light × Chinese/English, the balance pill at peak (amber breathing glow) and valley (green steady glow), and the update hint (the footer badge when an update exists, a zoom of the badge, and the “copied” feedback after clicking)
+- **The npm package no longer ships screenshots**: measured on npmjs.com, relative image paths in a README are rewritten to GitHub raw URLs (`raw.githubusercontent.com/<owner>/<repo>/HEAD/...`), so the images are served by GitHub and have nothing to do with the tarball. `docs/images` was therefore removed from `package.json` `files`: the package drops from **1376 KB to 66 KB** (26 → 11 files), making installs and upgrades faster, with no change to how the screenshots render in the repo or on GitHub/npm
+- **`scripts/release.sh`**: the sync preflight now allows being ahead of origin (so a committed-but-unpushed changelog can be released) while still refusing a diverged branch
+
+### Notes
+
+- No code changed in this version; plugin behaviour is identical to 1.2.1 — this is documentation and packaging scope only
 
 ## [1.2.1] - 2026-09-11
 

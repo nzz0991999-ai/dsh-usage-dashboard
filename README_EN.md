@@ -12,20 +12,39 @@ The current stable version is `1.1.1`. See [CHANGELOG_EN.md](./CHANGELOG_EN.md) 
 
 After installation and configuration, the bottom-right balance pill expands into the full DeepSeek usage dashboard (peak/valley banner, today/this-month metrics, usage heatmap, and model donut):
 
-![DeepSeek Harness usage dashboard preview (v1.1.1)](./docs/images/usage-dashboard-preview.png)
+![DeepSeek Harness usage dashboard (dark theme, peak hour, English)](./docs/images/usage-dashboard-panel-en-dark-peak.jpg)
 
 ## Screenshots
 
-The hero preview is above; here are close-ups of individual features:
+**Panel** — dark / light × Chinese / English:
 
 <table>
   <tr>
-    <td align="center"><img src="./docs/images/usage-dashboard-pill.png" width="300" alt="Closed balance pill (valley hours)"><br><sub>Closed balance pill (valley hours)</sub></td>
-    <td align="center"><img src="./docs/images/usage-dashboard-panel.png" width="300" alt="Expanded panel (valley hours)"><br><sub>Expanded panel (valley hours)</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-zh-dark-peak.jpg" width="420" alt="Dark theme, peak hour, Chinese panel"><br><sub>Dark · peak · 中文</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-en-dark-peak.jpg" width="420" alt="Dark theme, peak hour, English panel"><br><sub>Dark · peak · English</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="./docs/images/usage-dashboard-detail.png" width="150" alt="Panel detail view"><br><sub>Panel detail view</sub></td>
-    <td align="center"><img src="./docs/images/usage-dashboard-peak.png" width="150" alt="Peak-hours state with heatmap tooltip"><br><sub>Peak-hours state + heatmap tooltip</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-zh-light-valley.jpg" width="420" alt="Light theme, valley hour, Chinese panel"><br><sub>Light · valley · 中文</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-panel-en-light-valley.jpg" width="420" alt="Light theme, valley hour, English panel"><br><sub>Light · valley · English</sub></td>
+  </tr>
+</table>
+
+**Balance pill** — amber breathing glow at peak, green steady glow at valley:
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-pill-peak.jpg" width="360" alt="Peak-hour pill with amber breathing glow"><br><sub>Peak · amber breathing glow</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-pill-valley.jpg" width="360" alt="Valley-hour pill with green steady glow"><br><sub>Valley · green steady glow</sub></td>
+  </tr>
+</table>
+
+**Update hint** — when npm has a newer version the footer version becomes a clickable badge; one click copies the upgrade command:
+
+<table>
+  <tr>
+    <td align="center"><img src="./docs/images/usage-dashboard-update-panel.jpg" width="150" alt="Panel when an update is available: the footer version becomes an update badge"><br><sub>Panel when an update is available</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-update-badge.png" width="230" alt="Update badge: current → available"><br><sub>Badge: current → available</sub></td>
+    <td align="center"><img src="./docs/images/usage-dashboard-update-copied.png" width="230" alt="After clicking: upgrade command copied"><br><sub>After clicking · command copied</sub></td>
   </tr>
 </table>
 
