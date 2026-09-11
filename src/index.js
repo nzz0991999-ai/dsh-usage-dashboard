@@ -4,15 +4,18 @@
  * 数据源:
  *   1. 官方余额:  GET {apiBaseUrl}/user/balance         (API Key, 已文档化)
  *   2. 平台余额:  GET {platformBaseUrl}/api/v0/users/get_user_summary   (登录态 userToken)
- *   3. 平台用量:  GET {platformBaseUrl}/api/v0/usage/amount?month=&year=  (登录态 userToken)
- *   4. 平台花费:  GET {platformBaseUrl}/api/v0/usage/cost?month=&year=    (登录态 userToken)
+ *   3. 平台用量:  GET {platformBaseUrl}/api/v0/usage/by_api_key/amount?start=&end=&tz=  (登录态 userToken)
+ *   4. 平台花费:  GET {platformBaseUrl}/api/v0/usage/by_api_key/cost?start=&end=&tz=    (登录态 userToken)
+ *      3/4 与官网用量页同源: start/end 为 epoch 秒, tz 为时区偏移秒(默认 28800 = GMT+8),
+ *      按本地日历日切桶且**当天实时更新**。整月一次请求(月长 ≤ 31 天, 平台允许的上限)。
+ *      旧接口 /api/v0/usage/amount|cost?month=&year= 作为兜底: 它按 UTC 切天且当天恒为 0。
  *
  * userToken 解析顺序: 运行时配置(POST /usage-dashboard/config 设置并持久化)
  *   → 环境变量 DEEPSEEK_PLATFORM_TOKEN → 密钥文件($DSH_HOME/storages/dsh-usage-dashboard.secret, 0600)。
  * 浏览器只能读取脱敏后的配置与缓存, 永远不会拿到明文 token。
  *
- * 平台 3/4 为未公开接口, 响应结构以防御式解析为主(见 normalizeSummary / normalizeMonth),
- * 每次解析都会把原始数据放进 `raw*` 字段方便排查; 接口失效时保留上次成功值(stale-while-error)。
+ * 平台 2/3/4 为未公开接口, 响应结构以防御式解析为主(见 normalizeSummary / normalizeMonth /
+ * normalizeMonthBuckets), 接口失效时保留上次成功值(stale-while-error)。
  */
 import Schema from '@deepseek-ai/schemastery'
 import { promises as fsp } from 'node:fs'
@@ -29,6 +32,12 @@ export const Config = Schema.object({
   apiBaseUrl: Schema.string().default('https://api.deepseek.com'),
   /** 官方余额查询用的 credentials 引用名 */
   apiKeyRef: Schema.string().default('DEEPSEEK_API_KEY'),
+  /**
+   * 平台用量接口使用的时区偏移(秒, 东为正), 默认 28800 = GMT+8。
+   * 官方用量页所有日期均按 GMT+8 显示, 该值同时决定按天分桶与请求的 start/end 对齐;
+   * 必须是 900 的整数倍且落在 [-43200, 50400](平台接口限制)。
+   */
+  timezoneOffsetSec: Schema.number().default(28800),
   /** 服务器向 DeepSeek 拉取数据的频率(ms) */
   refreshIntervalMs: Schema.number().min(30000).default(600000),
   /** 浏览器读取本地缓存的频率(ms) */
@@ -59,6 +68,10 @@ const toNum = (v) => {
   }
   return null
 }
+
+/** 平台用量接口要求的时区偏移(秒): 900 的整数倍且落在 [-43200, 50400]; 非法值回落到 GMT+8。 */
+const DEFAULT_TZ_SEC = 28800
+const normalizeTzSec = (v) => (Number.isInteger(v) && v % 900 === 0 && v >= -43200 && v <= 50400 ? v : DEFAULT_TZ_SEC)
 
 /** 归一化官方 `/user/balance`。 */
 export const normalizeBalances = (data) => {
@@ -97,61 +110,8 @@ const dayOfDate = (dateStr) => {
   return m !== null ? Number(m[3]) : null
 }
 
-/**
- * 归一化某月的 amount + cost 两个响应(2026-08 实测 schema):
- *   amount: data.biz_data = { total: [...], days: [{date, data:[{model, usage:[{type, amount}]}]}] }
- *   cost:   data.biz_data = [ { currency, total: [...], days: [...] } ]  (多币种桶, 取第一个)
- * 输出 { year, month, days, totals, cacheHitRate, modelTotals, currency }。
- */
-export const normalizeMonth = (amountData, costData, year, month) => {
-  const amountBiz = amountData?.data?.biz_data ?? amountData?.data ?? {}
-  const costBizRaw = costData?.data?.biz_data
-  const costBiz = Array.isArray(costBizRaw) ? (costBizRaw[0] ?? {}) : (costBizRaw ?? {})
-  const currency = typeof costBiz.currency === 'string' && costBiz.currency !== '' ? costBiz.currency : 'CNY'
-
-  const amountDays = Array.isArray(amountBiz.days) ? amountBiz.days : []
-  const costDays = Array.isArray(costBiz.days) ? costBiz.days : []
-
-  const byDay = new Map()
-  const ensure = (day) => {
-    if (!byDay.has(day)) byDay.set(day, { day, cost: 0, tokens: 0, promptTokens: 0, cacheHitTokens: 0, cacheMissTokens: 0, outputTokens: 0, requests: 0, models: {} })
-    return byDay.get(day)
-  }
-
-  // cost 天表: 按天 × 模型累加各类型金额(REQUEST 不计花费)
-  for (const entry of costDays) {
-    const day = dayOfDate(entry?.date)
-    if (day === null) continue
-    const d = ensure(day)
-    for (const me of Array.isArray(entry?.data) ? entry.data : []) {
-      const u = usageMap(me)
-      const cost = (u.promptTokens ?? 0) + (u.cacheHitTokens ?? 0) + (u.cacheMissTokens ?? 0) + (u.outputTokens ?? 0)
-      d.cost += cost
-      const model = typeof me.model === 'string' && me.model !== '' ? me.model : 'unknown'
-      if (!d.models[model]) d.models[model] = { model, cost: 0, tokens: 0 }
-      d.models[model].cost += cost
-    }
-  }
-
-  // amount 天表: 按天 × 模型累加 token 与请求数
-  for (const entry of amountDays) {
-    const day = dayOfDate(entry?.date)
-    if (day === null) continue
-    const d = ensure(day)
-    for (const me of Array.isArray(entry?.data) ? entry.data : []) {
-      const u = usageMap(me)
-      d.promptTokens += u.promptTokens ?? 0
-      d.cacheHitTokens += u.cacheHitTokens ?? 0
-      d.cacheMissTokens += u.cacheMissTokens ?? 0
-      d.outputTokens += u.outputTokens ?? 0
-      d.requests += u.requests ?? 0
-      d.tokens += (u.promptTokens ?? 0) + (u.cacheHitTokens ?? 0) + (u.cacheMissTokens ?? 0) + (u.outputTokens ?? 0)
-      const model = typeof me.model === 'string' && me.model !== '' ? me.model : 'unknown'
-      if (!d.models[model]) d.models[model] = { model, cost: 0, tokens: 0 }
-      d.models[model].tokens += (u.promptTokens ?? 0) + (u.cacheHitTokens ?? 0) + (u.cacheMissTokens ?? 0) + (u.outputTokens ?? 0)
-    }
-  }
-
+/** 把按天累加的中间结构折叠成 payload(normalizeMonth / normalizeMonthBuckets 共用)。 */
+const buildMonthPayload = (byDay, year, month, currency) => {
   const days = [...byDay.values()].sort((a, b) => a.day - b.day).map((d) => ({
     day: d.day,
     date: `${year}-${String(month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`,
@@ -191,6 +151,149 @@ export const normalizeMonth = (amountData, costData, year, month) => {
     cacheHitRate: inputSum > 0 ? hitSum / inputSum : null,
     modelTotals: [...modelMap.values()].sort((a, b) => b.cost - a.cost),
   }
+}
+
+/** 新建/取出某一天的累加器。 */
+const ensureDay = (byDay, day) => {
+  if (!byDay.has(day)) {
+    byDay.set(day, { day, cost: 0, tokens: 0, promptTokens: 0, cacheHitTokens: 0, cacheMissTokens: 0, outputTokens: 0, requests: 0, models: {} })
+  }
+  return byDay.get(day)
+}
+
+/** 模型名兜底。 */
+const modelName = (entry) => (typeof entry?.model === 'string' && entry.model !== '' ? entry.model : 'unknown')
+
+/**
+ * 归一化某月的 amount + cost 两个响应(2026-08 实测 schema, 旧接口):
+ *   amount: data.biz_data = { total: [...], days: [{date, data:[{model, usage:[{type, amount}]}]}] }
+ *   cost:   data.biz_data = [ { currency, total: [...], days: [...] } ]  (多币种桶, 取第一个)
+ * 注意: 该接口的"天"按 UTC 切分(实测 UTC 9/8 的行 == GMT+8 9/8 08:00 → 9/9 08:00),
+ * 且当天(本地日历日)的行恒为 0, 因此只作为新接口失败时的兜底。
+ * 输出 { year, month, days, totals, cacheHitRate, modelTotals, currency }。
+ */
+export const normalizeMonth = (amountData, costData, year, month) => {
+  const amountBiz = amountData?.data?.biz_data ?? amountData?.data ?? {}
+  const costBizRaw = costData?.data?.biz_data
+  const costBiz = Array.isArray(costBizRaw) ? (costBizRaw[0] ?? {}) : (costBizRaw ?? {})
+  const currency = typeof costBiz.currency === 'string' && costBiz.currency !== '' ? costBiz.currency : 'CNY'
+
+  const amountDays = Array.isArray(amountBiz.days) ? amountBiz.days : []
+  const costDays = Array.isArray(costBiz.days) ? costBiz.days : []
+
+  const byDay = new Map()
+  const ensure = (day) => ensureDay(byDay, day)
+
+  // cost 天表: 按天 × 模型累加各类型金额(REQUEST 不计花费)
+  for (const entry of costDays) {
+    const day = dayOfDate(entry?.date)
+    if (day === null) continue
+    const d = ensure(day)
+    for (const me of Array.isArray(entry?.data) ? entry.data : []) {
+      const u = usageMap(me)
+      const cost = (u.promptTokens ?? 0) + (u.cacheHitTokens ?? 0) + (u.cacheMissTokens ?? 0) + (u.outputTokens ?? 0)
+      d.cost += cost
+      const model = modelName(me)
+      if (!d.models[model]) d.models[model] = { model, cost: 0, tokens: 0 }
+      d.models[model].cost += cost
+    }
+  }
+
+  // amount 天表: 按天 × 模型累加 token 与请求数
+  for (const entry of amountDays) {
+    const day = dayOfDate(entry?.date)
+    if (day === null) continue
+    const d = ensure(day)
+    for (const me of Array.isArray(entry?.data) ? entry.data : []) {
+      const u = usageMap(me)
+      d.promptTokens += u.promptTokens ?? 0
+      d.cacheHitTokens += u.cacheHitTokens ?? 0
+      d.cacheMissTokens += u.cacheMissTokens ?? 0
+      d.outputTokens += u.outputTokens ?? 0
+      d.requests += u.requests ?? 0
+      d.tokens += (u.promptTokens ?? 0) + (u.cacheHitTokens ?? 0) + (u.cacheMissTokens ?? 0) + (u.outputTokens ?? 0)
+      const model = modelName(me)
+      if (!d.models[model]) d.models[model] = { model, cost: 0, tokens: 0 }
+      d.models[model].tokens += (u.promptTokens ?? 0) + (u.cacheHitTokens ?? 0) + (u.cacheMissTokens ?? 0) + (u.outputTokens ?? 0)
+    }
+  }
+
+  return buildMonthPayload(byDay, year, month, currency)
+}
+
+/**
+ * 归一化某月的 by_api_key amount + cost 响应(2026-09 实测 schema, 与官网用量页同源):
+ *   amount: data.biz_data = { start, end, bucket, models, series:[{api_key, model, buckets:[{time, usage:{TYPE: amount}}]}] }
+ *   cost:   data.biz_data = { start, end, bucket, models, data:[{currency, series:[{api_key, model, buckets:[{time, cost}]}]}] }
+ * `time` 是 UTC 秒; `time + tzSec` 的 UTC 日历日即为本地(默认 GMT+8)日期 —— 与官方用量页
+ * "所有日期均按 GMT+8 显示" 一致, 且当天的桶是实时更新的(today 不再恒为 0)。
+ * 输出结构与 normalizeMonth 完全一致。
+ */
+export const normalizeMonthBuckets = (amountData, costData, year, month, tzSec = 28800, preferredCurrency = null) => {
+  const amountBiz = amountData?.data?.biz_data ?? amountData?.data ?? {}
+  const costBizRaw = costData?.data?.biz_data ?? costData?.data ?? {}
+  const costGroups = Array.isArray(costBizRaw?.data) ? costBizRaw.data : []
+  // 优先账户计费币种(美元账户不会因为存在 CNY 桶就被显示成 ¥), 其次 CNY, 最后第一个币种桶
+  const costGroup = costGroups.find((g) => preferredCurrency !== null && g?.currency === preferredCurrency)
+    ?? costGroups.find((g) => g?.currency === 'CNY')
+    ?? costGroups[0] ?? {}
+  const currency = typeof costGroup?.currency === 'string' && costGroup.currency !== '' ? costGroup.currency : 'CNY'
+
+  const amountSeries = Array.isArray(amountBiz?.series) ? amountBiz.series : []
+  const costSeries = Array.isArray(costGroup?.series) ? costGroup.series : []
+
+  /** bucket 的 UTC 秒 → 本地日历日(只保留本月内的桶)。 */
+  const dayOfBucket = (time) => {
+    const n = toNum(time)
+    if (n === null) return null
+    const d = new Date((n + tzSec) * 1000)
+    if (Number.isNaN(d.getTime())) return null
+    if (d.getUTCFullYear() !== year || d.getUTCMonth() + 1 !== month) return null
+    return d.getUTCDate()
+  }
+
+  const byDay = new Map()
+
+  // cost 序列: 按天 × 模型累加金额
+  for (const entry of costSeries) {
+    const model = modelName(entry)
+    for (const bucket of Array.isArray(entry?.buckets) ? entry.buckets : []) {
+      const day = dayOfBucket(bucket?.time)
+      if (day === null) continue
+      const cost = toNum(bucket?.cost) ?? 0
+      const d = ensureDay(byDay, day)
+      d.cost += cost
+      if (!d.models[model]) d.models[model] = { model, cost: 0, tokens: 0 }
+      d.models[model].cost += cost
+    }
+  }
+
+  // amount 序列: 按天 × 模型累加 token 与请求数
+  for (const entry of amountSeries) {
+    const model = modelName(entry)
+    for (const bucket of Array.isArray(entry?.buckets) ? entry.buckets : []) {
+      const day = dayOfBucket(bucket?.time)
+      if (day === null) continue
+      const u = bucket?.usage ?? {}
+      const prompt = toNum(u.PROMPT_TOKEN) ?? 0
+      const cacheHit = toNum(u.PROMPT_CACHE_HIT_TOKEN) ?? 0
+      const cacheMiss = toNum(u.PROMPT_CACHE_MISS_TOKEN) ?? 0
+      const output = toNum(u.RESPONSE_TOKEN) ?? 0
+      const requests = toNum(u.REQUEST) ?? 0
+      const tokens = prompt + cacheHit + cacheMiss + output
+      const d = ensureDay(byDay, day)
+      d.promptTokens += prompt
+      d.cacheHitTokens += cacheHit
+      d.cacheMissTokens += cacheMiss
+      d.outputTokens += output
+      d.requests += requests
+      d.tokens += tokens
+      if (!d.models[model]) d.models[model] = { model, cost: 0, tokens: 0 }
+      d.models[model].tokens += tokens
+    }
+  }
+
+  return buildMonthPayload(byDay, year, month, currency)
 }
 
 /** 归一化平台 get_user_summary。 */
@@ -253,6 +356,7 @@ export function apply(ctx, config) {
     platformBaseUrl: config.platformBaseUrl ?? 'https://platform.deepseek.com',
     apiBaseUrl: config.apiBaseUrl ?? 'https://api.deepseek.com',
     apiKeyRef: config.apiKeyRef ?? 'DEEPSEEK_API_KEY',
+    timezoneOffsetSec: normalizeTzSec(config.timezoneOffsetSec),
     refreshIntervalMs: config.refreshIntervalMs ?? 600000,
     clientPollIntervalMs: config.clientPollIntervalMs ?? 30000,
     timeoutMs: config.timeoutMs ?? 8000,
@@ -268,7 +372,6 @@ export function apply(ctx, config) {
   // ---- userToken 持久化($DSH_HOME/storages/dsh-usage-dashboard.secret, 0600) ----
   const secretPath = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'storages', 'dsh-usage-dashboard.secret')
   let secretToken = ''
-  let runtimeToken = ''
 
   const loadSecret = async () => {
     try {
@@ -298,7 +401,6 @@ export function apply(ctx, config) {
   }
 
   const getToken = () => {
-    if (runtimeToken !== '') return { token: runtimeToken, source: 'runtime' }
     if (process.env.DEEPSEEK_PLATFORM_TOKEN) return { token: process.env.DEEPSEEK_PLATFORM_TOKEN, source: 'env' }
     if (secretToken !== '') return { token: secretToken, source: 'secret-file' }
     return { token: '', source: 'none' }
@@ -366,13 +468,34 @@ export function apply(ctx, config) {
   let inflightSummary = null
   const inflightMonths = new Map()
 
+  /** 账户计费币种: 平台余额 → 官方余额 → null(未知)。 */
+  const accountCurrency = () => (
+    summary.payload?.currency
+    ?? official.payload?.balances?.[0]?.currency
+    ?? null
+  )
+
+  /** 官方余额失败后的重试间隔(实测偶发 8s 挂起被 abort, 重试一次通常即恢复)。 */
+  const OFFICIAL_RETRY_DELAY_MS = 1000
+
   const refreshOfficial = () => {
     if (inflightOfficial !== null) return inflightOfficial
+    const attempt = async () => {
+      const key = await resolveApiKey()
+      if (key === '') throw Object.assign(new Error('api-key-missing'), { code: 'api-key-missing' })
+      return fetchJson(`${runtimeConfig.apiBaseUrl.replace(/\/+$/, '')}/user/balance`, { bearer: key })
+    }
     inflightOfficial = (async () => {
       try {
-        const key = await resolveApiKey()
-        if (key === '') throw Object.assign(new Error('api-key-missing'), { code: 'api-key-missing' })
-        const data = await fetchJson(`${runtimeConfig.apiBaseUrl.replace(/\/+$/, '')}/user/balance`, { bearer: key })
+        let data
+        try {
+          data = await attempt()
+        } catch (error) {
+          // 瞬时超时/网络抖动重试一次; 未配置 API Key 则重试无意义
+          if (error?.code === 'api-key-missing') throw error
+          await new Promise((resolve) => setTimeout(resolve, OFFICIAL_RETRY_DELAY_MS))
+          data = await attempt()
+        }
         official = {
           state: 'ok',
           payload: { isAvailable: data?.is_available === true, balances: normalizeBalances(data) },
@@ -404,8 +527,62 @@ export function apply(ctx, config) {
     return inflightSummary
   }
 
-  const now = new Date()
-  const currentKey = `${now.getFullYear()}-${now.getMonth() + 1}`
+  /**
+   * 以配置时区(而非宿主系统时区)为准的"现在": 返回的 Date 用 getUTC* 读取即为该时区的墙上时间。
+   * 平台用量按 timezoneOffsetSec 分天, 宿主的"当前月"必须与之一致, 否则跨月/跨日会错位。
+   */
+  const zonedNow = (ms = Date.now()) => new Date(ms + runtimeConfig.timezoneOffsetSec * 1000)
+  const currentMonthOf = () => {
+    const d = zonedNow()
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 }
+  }
+  const currentKeyOf = () => {
+    const { year, month } = currentMonthOf()
+    return `${year}-${month}`
+  }
+
+  /** 本地时区下某月的 [月初 00:00, 次月初 00:00) → epoch 秒。 */
+  const monthRangeSec = (year, month) => {
+    const tz = runtimeConfig.timezoneOffsetSec
+    const start = Math.floor(Date.UTC(year, month - 1, 1) / 1000) - tz
+    const end = Math.floor(Date.UTC(year, month, 1) / 1000) - tz
+    return { start, end, tz }
+  }
+
+  /**
+   * 首选数据源: by_api_key 桶接口(官网用量页同源)。
+   * 一次请求覆盖整月(月长 ≤ 31 天, 正好是平台允许的最大范围), bucket 自动为 86400(按天),
+   * 按 GMT+8 切天, 且当天的桶实时更新 —— 这是"今日"能显示出来的关键。
+   */
+  const fetchMonthBuckets = async (year, month) => {
+    const { start, end, tz } = monthRangeSec(year, month)
+    const query = `start=${start}&end=${end}&tz=${tz}`
+    const [amountData, costData] = await Promise.all([
+      platformFetch(`/api/v0/usage/by_api_key/amount?${query}`).catch(() => null),
+      platformFetch(`/api/v0/usage/by_api_key/cost?${query}`).catch(() => null),
+    ])
+    if (amountData === null && costData === null) throw Object.assign(new Error('usage-fetch-failed'), { code: 'usage-fetch-failed' })
+    const code = platformCode(amountData ?? costData, null)
+    if (code !== null) throw Object.assign(new Error(code), { code })
+    const bizOf = (data) => data?.data?.biz_data ?? null
+    if (bizOf(amountData) === null && bizOf(costData) === null) throw Object.assign(new Error('usage-fetch-failed'), { code: 'usage-fetch-failed' })
+    return { ...normalizeMonthBuckets(amountData, costData, year, month, tz, accountCurrency()), source: 'by_api_key' }
+  }
+
+  /**
+   * 兜底数据源: 旧 month/year 接口。
+   * 其"天"按 UTC 切分且当天恒为 0(见 normalizeMonth 注释), 仅在首选接口失败时使用。
+   */
+  const fetchMonthLegacy = async (year, month) => {
+    const [amountData, costData] = await Promise.all([
+      platformFetch(`/api/v0/usage/amount?month=${month}&year=${year}`).catch(() => null),
+      platformFetch(`/api/v0/usage/cost?month=${month}&year=${year}`).catch(() => null),
+    ])
+    if (amountData === null && costData === null) throw Object.assign(new Error('usage-fetch-failed'), { code: 'usage-fetch-failed' })
+    const code = platformCode(amountData ?? costData, null)
+    if (code !== null) throw Object.assign(new Error(code), { code })
+    return { ...normalizeMonth(amountData, costData, year, month), source: 'legacy' }
+  }
 
   const refreshMonth = (year, month, force = false) => {
     const key = `${year}-${month}`
@@ -415,22 +592,29 @@ export function apply(ctx, config) {
       return Promise.resolve(cached)
     }
     const task = (async () => {
+      let payload = null
+      let failure = null
       try {
-        const [amountData, costData] = await Promise.all([
-          platformFetch(`/api/v0/usage/amount?month=${month}&year=${year}`).catch(() => null),
-          platformFetch(`/api/v0/usage/cost?month=${month}&year=${year}`).catch(() => null),
-        ])
-        if (amountData === null && costData === null) throw Object.assign(new Error('usage-fetch-failed'), { code: 'usage-fetch-failed' })
-        const code = platformCode(amountData ?? costData, null)
-        if (code !== null) throw Object.assign(new Error(code), { code })
-        const payload = normalizeMonth(amountData, costData, year, month)
-        months.set(key, { state: 'ok', payload, error: null, fetchedAt: Date.now() })
+        payload = await fetchMonthBuckets(year, month)
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        const code = error?.code ?? null
-        const prev = months.get(key)
-        months.set(key, { state: prev?.state === 'ok' ? 'ok' : 'error', payload: prev?.payload ?? null, error: message, code, fetchedAt: prev?.fetchedAt ?? 0 })
+        failure = error
       }
+      if (payload === null) {
+        try {
+          payload = await fetchMonthLegacy(year, month)
+          ctx.logger.warn(`[dsh-usage-dashboard] by_api_key 用量接口失败(${failure instanceof Error ? failure.message : failure}), 已回退旧接口`)
+        } catch (error) {
+          failure = failure ?? error
+        }
+      }
+      if (payload !== null) {
+        months.set(key, { state: 'ok', payload, error: null, code: null, source: payload.source ?? null, fetchedAt: Date.now() })
+        return
+      }
+      const message = failure instanceof Error ? failure.message : String(failure)
+      const code = failure?.code ?? null
+      const prev = months.get(key)
+      months.set(key, { state: prev?.state === 'ok' ? 'ok' : 'error', payload: prev?.payload ?? null, error: message, code, fetchedAt: prev?.fetchedAt ?? 0 })
     })().finally(() => { inflightMonths.delete(key) })
     inflightMonths.set(key, task)
     return task
@@ -464,8 +648,10 @@ export function apply(ctx, config) {
     if (!runtimeConfig.checkUpdate) return Promise.resolve()
     if (inflightUpdate !== null) return inflightUpdate
     inflightUpdate = (async () => {
+      // 本机版本与网络无关: 先取出来, 失败路径也要保留, 客户端页脚依赖它显示真实版本
+      const current = await getOwnVersion()
+      updateInfo = { ...updateInfo, currentVersion: current !== '' ? current : updateInfo.currentVersion }
       try {
-        const current = await getOwnVersion()
         const data = await fetchJson('https://registry.npmjs.org/deepseek-harness-usage-dashboard/latest', { timeoutMs: Math.min(runtimeConfig.timeoutMs, 10000) })
         const latest = typeof data?.version === 'string' ? data.version : null
         const hasNewer = latest !== null && current !== '' && cmpVersion(latest, current) > 0
@@ -487,7 +673,8 @@ export function apply(ctx, config) {
     const { token, source } = getToken()
     const hasToken = token !== ''
     const emptyEntry = { state: 'empty', payload: null, error: null, code: null, fetchedAt: 0 }
-    const month = hasToken ? (months.get(currentKey) ?? emptyEntry) : emptyEntry
+    const current = currentMonthOf()
+    const month = hasToken ? (months.get(currentKeyOf()) ?? emptyEntry) : emptyEntry
     return {
       ok: true,
       hasToken,
@@ -496,6 +683,7 @@ export function apply(ctx, config) {
         platformBaseUrl: runtimeConfig.platformBaseUrl,
         apiBaseUrl: runtimeConfig.apiBaseUrl,
         apiKeyRef: runtimeConfig.apiKeyRef,
+        timezoneOffsetSec: runtimeConfig.timezoneOffsetSec,
         refreshIntervalMs: runtimeConfig.refreshIntervalMs,
         clientPollIntervalMs: runtimeConfig.clientPollIntervalMs,
         timeoutMs: runtimeConfig.timeoutMs,
@@ -507,12 +695,13 @@ export function apply(ctx, config) {
       official: { ...official, payload: official.payload },
       summary: hasToken ? { ...summary, payload: summary.payload } : emptyEntry,
       month: {
-        year: Number(currentKey.split('-')[0]),
-        month: Number(currentKey.split('-')[1]),
+        year: current.year,
+        month: current.month,
         state: month.state,
         payload: month.payload,
         error: month.error ?? null,
         code: month.code ?? null,
+        source: month.source ?? null,
         fetchedAt: month.fetchedAt,
       },
       update: { ...updateInfo },
@@ -529,6 +718,7 @@ export function apply(ctx, config) {
       payload: entry.payload,
       error: entry.error ?? null,
       code: entry.code ?? null,
+      source: entry.source ?? null,
       fetchedAt: entry.fetchedAt,
     }
   }
@@ -542,7 +732,8 @@ export function apply(ctx, config) {
     void refreshOfficial()
     if (getToken().token !== '') {
       void refreshSummary()
-      void refreshMonth(Number(currentKey.split('-')[0]), Number(currentKey.split('-')[1]))
+      const { year, month } = currentMonthOf()
+      void refreshMonth(year, month)
     }
   }
   const resetLoop = () => {
@@ -571,6 +762,8 @@ export function apply(ctx, config) {
   ctx.effect(() => {
     void loadSecret().then(() => {
       resetLoop()
+      // 无论是否开启更新检查, 都先把本机版本号准备好(客户端页脚显示用)
+      void getOwnVersion().then((v) => { if (v !== '') updateInfo = { ...updateInfo, currentVersion: v } })
       void checkForUpdate()
       resetUpdateTimer()
     })
@@ -635,9 +828,9 @@ export function apply(ctx, config) {
           return
         }
         const parsedUrl = new URL(req.url ?? '/', 'http://127.0.0.1')
-        const nowDate = new Date()
-        const year = Number(parsedUrl.searchParams.get('year')) || nowDate.getFullYear()
-        const month = Number(parsedUrl.searchParams.get('month')) || nowDate.getMonth() + 1
+        const fallback = currentMonthOf()
+        const year = Number(parsedUrl.searchParams.get('year')) || fallback.year
+        const month = Number(parsedUrl.searchParams.get('month')) || fallback.month
         if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12 || year < 2020 || year > 2100) {
           sendJson(res, 400, { ok: false, error: 'invalid-month' })
           return
@@ -673,7 +866,6 @@ export function apply(ctx, config) {
               if (trimmed === '' && getToken().token !== '') {
                 // 清空 token
                 await saveSecret('')
-                runtimeToken = ''
                 tokenChanged = true
               } else if (trimmed !== '' && trimmed !== getToken().token) {
                 // 校验新 token: 用它调一次平台余额接口
@@ -692,7 +884,6 @@ export function apply(ctx, config) {
                   return
                 }
                 await saveSecret(trimmed)
-                runtimeToken = ''
                 tokenChanged = true
               }
             }

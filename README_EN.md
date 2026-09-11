@@ -32,11 +32,12 @@ The hero preview is above; here are close-ups of individual features:
 ## Features
 
 - **Balance pill**: a compact capsule in the bottom-right corner showing the live balance; during **peak hours** its border glows amber with a soft pulse, during valley hours it glows green; click to open the panel, and click anywhere outside (or the pill again) to close — both open and close animate with a 160 ms fade
-- **Account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown
+- **Account balance**: official `/user/balance` (API key) + platform `get_user_summary` (userToken), with top-up vs. granted breakdown; amounts follow the account currency (`¥`/`$`/`€`) — symbol only, **no FX conversion**
 - **Metric cards (3×2 grid)**: Today amount · Today tokens · Requests (day) / Month amount · Month tokens · Cache hit (month); each today card carries a “share of month” progress bar
-- **Usage heatmap** (GitHub style): daily amount/tokens over the last `historyMonths` months (default 6), darker = higher; hovering a cell pops a live tooltip card with that day's amount, tokens, requests and cache-hit rate (days without usage say “no usage this day”)
-- **Model donut**: grouped by **day / week / month**, browsable with **‹ ›** between periods, and toggling between amount/tokens; the center shows the period total; small models are folded into a gray “Other” (a model is listed individually when its share is ≥1.5% and within the top 8)
+- **Usage heatmap** (GitHub style, collapsed by default): click the “Usage heatmap” heading to expand; daily amount/tokens over the last `historyMonths` months (default 6), darker = higher; hovering a cell pops a live tooltip card with that day's amount, tokens, requests and cache-hit rate (days without usage say “no usage this day”). The expanded state is remembered in the browser
+- **Model donut**: grouped by **day / week / month**, browsable with **‹ ›** between periods, and sorted **by amount / by tokens**; the legend shows **both dimensions at once** (the primary value follows the sort dimension, the other rides along as small text on the same row); the center shows the period total; small models are folded into a gray “Other” (a model is listed individually when its share is ≥1.5% and within the top 8)
 - **Peak/valley banner**: a unified banner at the top of the panel (amber peak / green valley with a compact countdown pill) giving live guidance; default peak windows `09:00–12:00` / `14:00–18:00` Beijing time, other hours are valley at ~50% off; windows configurable via `peakWindows`
+- **Chinese/English + in-panel language switch**: Settings offers “Follow interface / 中文 / English”; the default follows the Harness language, an explicit choice affects this panel only and is stored in the browser (other languages fall back to English through the locale fallback chain)
 - **userToken panel**: paste once, online validation, one-click clear, masked display
 
 ## Refresh strategy
@@ -55,8 +56,14 @@ The hero preview is above; here are close-ups of individual features:
 |---|---|---|
 | Official balance | `GET {apiBaseUrl}/user/balance` | API key (default `DEEPSEEK_API_KEY`, resolved via `ctx.credentials`) |
 | Platform balance | `GET {platformBaseUrl}/api/v0/users/get_user_summary` | platform `userToken` |
-| Daily usage | `GET {platformBaseUrl}/api/v0/usage/amount?month=&year=` | platform `userToken` |
-| Daily cost | `GET {platformBaseUrl}/api/v0/usage/cost?month=&year=` | platform `userToken` |
+| Daily usage | `GET {platformBaseUrl}/api/v0/usage/by_api_key/amount?start=&end=&tz=` | platform `userToken` |
+| Daily cost | `GET {platformBaseUrl}/api/v0/usage/by_api_key/cost?start=&end=&tz=` | platform `userToken` |
+| Daily usage (fallback) | `GET {platformBaseUrl}/api/v0/usage/amount?month=&year=` | platform `userToken` |
+| Daily cost (fallback) | `GET {platformBaseUrl}/api/v0/usage/cost?month=&year=` | platform `userToken` |
+
+> `start`/`end` are epoch seconds and `tz` is the timezone offset in seconds (`timezoneOffsetSec`, default `28800` = GMT+8).
+> These are the endpoints the official usage page itself calls: buckets are cut by GMT+8 and the **current day updates live**
+> (the legacy endpoint cuts days by UTC and always reports the current day as zero, so it is only a fallback).
 
 > The platform usage endpoints are **undocumented** (the same ones the usage page calls, and already used by community apps). They may break without notice if the platform changes; the plugin parses defensively, keeps the last successful data on failure, and never affects Harness itself.
 
@@ -249,6 +256,7 @@ Write into `$DSH_HOME/profiles/web/cordis.patch.yml`:
     timeoutMs: 8000                # per-request timeout (ms)
     historyMonths: 6               # months browsable in the panel
     apiKeyRef: DEEPSEEK_API_KEY    # credential reference for the official balance
+    timezoneOffsetSec: 28800       # usage/cost timezone offset (seconds), default GMT+8; decides "today" and day buckets, ignores the browser timezone
     taskRefreshCooldownMs: 60000   # min cooldown of the task-completion refresh (ms)
     peakWindows: [09:00-12:00, 14:00-18:00]   # peak windows (HH:MM-HH:MM, Beijing time)
     checkUpdate: true               # check npm for a newer version (hint only, never auto-installs)

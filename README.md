@@ -32,11 +32,12 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 ## 功能
 
 - **余额角标**:右下角一枚胶囊实时显示账户余额;当前为**峰时/谷时**时,边框呈现琥珀呼吸光 / 绿色静光;点击展开面板,点击面板外任意处或角标即可关闭(打开/关闭均带 160ms 淡入淡出)
-- **账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分
+- **账户余额**:官方 `/user/balance`(API Key)+ 平台 `get_user_summary`(登录态),充值/赠送拆分;金额币种跟随账户(`¥`/`$`/`€`),只换符号、**不做汇率换算**
 - **指标卡(3×2 网格)**:今日金额 · 今日Token · 请求数(日)/ 本月金额 · 本月Token · 缓存命中率(月);今日两张卡各带"今日占本月"进度条,粒度一目了然
-- **用量热力图**(GitHub 风格):近 `historyMonths` 个月(默认 6)的每日金额/Token,颜色越深用量越高;悬停单格即时浮卡显示当日金额、Token、请求数与命中率,无用量日提示"该日无用量"
-- **模型分布环形图**:支持 **日 / 周 / 月** 三种周期并可 **‹ › 左右翻看**、金额/Token 两维切换;中心显示周期总量;小额模型自动合并为灰色"其他"(份额 ≥1.5% 且前 8 名单独显示)
+- **用量热力图**(GitHub 风格,默认收起):点击「用量热力图」标题行展开;近 `historyMonths` 个月(默认 6)的每日金额/Token,颜色越深用量越高;悬停单格即时浮卡显示当日金额、Token、请求数与命中率,无用量日提示"该日无用量"。展开状态记在浏览器本地
+- **模型分布环形图**:支持 **日 / 周 / 月** 三种周期并可 **‹ › 左右翻看**、按金额/按 Token 两个排序维度;图例**同时显示两个维度**(主值跟随排序维度,另一维度以同排小字常显);中心显示周期总量;小额模型自动合并为灰色"其他"(份额 ≥1.5% 且前 8 名单独显示)
 - **峰谷时段横幅**:面板顶部统一风格横幅(峰橙红 / 谷绿,右侧紧凑倒计时),提示当前计费时段与建议(默认峰时 `09:00–12:00`、`14:00–18:00` 北京时间,其余谷时约 5 折;窗口用 `peakWindows` 配置)
+- **中英双语 + 面板语言开关**:设置里可选「跟随界面 / 中文 / English」,默认跟随 Harness 界面语言;显式选择只影响本面板并记在浏览器本地(非中英语言按 fallback 链回退英文)
 - **userToken 管理面板**:一次性粘贴平台登录态,保存在宿主端 `$DSH_HOME/storages/dsh-usage-dashboard.secret`(0600 权限),浏览器只会拿到脱敏值;支持验证、清除、环境变量 `DEEPSEEK_PLATFORM_TOKEN` 兜底
 
 ## 刷新机制
@@ -55,8 +56,13 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 |---|---|---|
 | 官方余额 | `GET {apiBaseUrl}/user/balance` | API Key(默认 `DEEPSEEK_API_KEY`,经 `ctx.credentials` 解析) |
 | 平台余额 | `GET {platformBaseUrl}/api/v0/users/get_user_summary` | 平台 `userToken` |
-| 每日用量 | `GET {platformBaseUrl}/api/v0/usage/amount?month=&year=` | 平台 `userToken` |
-| 每日花费 | `GET {platformBaseUrl}/api/v0/usage/cost?month=&year=` | 平台 `userToken` |
+| 每日用量 | `GET {platformBaseUrl}/api/v0/usage/by_api_key/amount?start=&end=&tz=` | 平台 `userToken` |
+| 每日花费 | `GET {platformBaseUrl}/api/v0/usage/by_api_key/cost?start=&end=&tz=` | 平台 `userToken` |
+| 每日用量(兜底) | `GET {platformBaseUrl}/api/v0/usage/amount?month=&year=` | 平台 `userToken` |
+| 每日花费(兜底) | `GET {platformBaseUrl}/api/v0/usage/cost?month=&year=` | 平台 `userToken` |
+
+> `start`/`end` 为 epoch 秒,`tz` 为时区偏移秒(`timezoneOffsetSec`,默认 `28800` = GMT+8)。该接口与官网用量页同源:
+> 按 GMT+8 切天且**当天实时更新**(旧接口按 UTC 切天,当天的桶恒为 0,因此仅作兜底)。
 
 > 平台用量接口为**未公开接口**(usage 页面同源,社区应用已在使用的稳定调用方式),官方改版可能导致失效;
 > 插件对响应做防御式解析,失效时保留上次成功数据并显示错误,不影响 Harness 本身。
@@ -250,6 +256,7 @@ dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
     timeoutMs: 8000                # 单次请求超时(ms)
     historyMonths: 6               # 面板可回看的月数
     apiKeyRef: DEEPSEEK_API_KEY    # 官方余额用的凭据引用名
+    timezoneOffsetSec: 28800       # 用量/花费的时区偏移(秒), 默认 GMT+8; 决定"今天"和按天分桶, 不看浏览器时区
     taskRefreshCooldownMs: 60000   # 任务完成后即时刷新的最小冷却(ms)
     peakWindows: [09:00-12:00, 14:00-18:00]   # 峰时窗口(HH:MM-HH:MM, 北京时间)
     checkUpdate: true               # 是否检查 npm 新版本(仅提示, 不自动安装)

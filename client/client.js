@@ -109,7 +109,7 @@ window.__ModuleLoader__.load({
 				".dshud_pvbanner_valley{background:linear-gradient(90deg,rgba(16,185,129,.13),rgba(16,185,129,.05));border:1px solid rgba(16,185,129,.4)}",
 				".dshud_pvbanner_valley::before{background:linear-gradient(180deg,#34d399,#059669)}",
 				".dshud_pvbanner_row{display:flex;align-items:center;justify-content:space-between;gap:8px}",
-				".dshud_pvbanner_title{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+				".dshud_pvbanner_title{flex:1;min-width:0;font-weight:700;font-size:12px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}",
 				".dshud_pvpill{flex-shrink:0;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-surface-elevated,#ffffff));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,0.25));color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}",
 				".dshud_pvbanner_sub{font-size:10.5px;opacity:.95}",
 				".dshud_caption{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--dsw-alias-label-tertiary)}",
@@ -126,9 +126,11 @@ window.__ModuleLoader__.load({
 				".dshud_tip_sub{font-size:10.5px;color:var(--dsw-alias-label-tertiary)}",
 				"@keyframes dshud-tipin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}",
 				".dshud_tip_inner{display:flex;flex-direction:column;animation:dshud-tipin .12s ease-out}",
-				".dshud_sect_head{display:flex;align-items:center;justify-content:space-between;gap:8px}",
+				".dshud_sect_head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 8px}",
+				".dshud_sect_head .dshud_field_label{white-space:nowrap;flex-shrink:0}",
+				".dshud_sect_head .dshud_sec_tabs:last-child{margin-left:auto}",
 				".dshud_sec_tabs{display:inline-flex;gap:2px;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,0.05));border-radius:7px;padding:2px}",
-				".dshud_sec_tab{border:none;background:transparent;color:var(--dsw-alias-label-secondary);font-size:10.5px;padding:3px 8px;border-radius:5px;cursor:pointer;transition:background-color .15s ease,color .15s ease}",
+				".dshud_sec_tab{border:none;background:transparent;color:var(--dsw-alias-label-secondary);font-size:10.5px;padding:3px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;transition:background-color .15s ease,color .15s ease}",
 				".dshud_sec_tab_active{background:var(--dsw-alias-bg-layer-1,#ffffff);color:var(--dsw-alias-label-primary);font-weight:600;box-shadow:var(--dsw-shadow-lv1,0 1px 3px rgba(0,0,0,0.1))}",
 				".dshud_periodrow{display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--dsw-alias-label-secondary)}",
 				".dshud_periodlabel{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;min-width:96px;text-align:center}",
@@ -145,6 +147,11 @@ window.__ModuleLoader__.load({
 				".dshud_dleg_meta{flex-shrink:0;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:1px}",
 				".dshud_dleg_val{font-weight:600;font-variant-numeric:tabular-nums}",
 				".dshud_dleg_pct{font-size:9.5px;color:var(--dsw-alias-label-tertiary)}",
+				".dshud_dleg_valrow{display:flex;align-items:baseline;justify-content:flex-end;gap:6px}",
+				".dshud_dleg_alt{font-size:10px;font-weight:400;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}",
+				".dshud_hm_toggle{display:inline-flex;align-items:center;gap:6px;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer}",
+				".dshud_chev{display:inline-flex;align-items:center;transition:transform .15s ease}",
+				".dshud_chev_open{transform:rotate(90deg)}",
 				".dshud_models_empty{font-size:11.5px;color:var(--dsw-alias-label-tertiary);padding:10px 0}"
 			].join("\n");
 			document.head.appendChild(tag);
@@ -168,15 +175,29 @@ window.__ModuleLoader__.load({
 			if (n < 1e6) return scaled(n / 1e3) + "K";
 			return scaled(n / 1e6) + "M";
 		}
+		// 时区口径: 一律以宿主下发的 timezoneOffsetSec(默认 GMT+8)为准, 不看浏览器时区。
+		// 浏览器/系统时区可能被代理或系统设置改变, 而平台用量与官网一致按 GMT+8 分天,
+		// 若用本地日期判定"今天", 跨日时段会取到不存在数据的日期而显示为 0。
+		const DEFAULT_TZ_SEC = 28800;
+		let tzSec = DEFAULT_TZ_SEC;
+		const setTimezoneOffsetSec = (v) => {
+			const n = Number(v);
+			tzSec = Number.isFinite(n) ? n : DEFAULT_TZ_SEC;
+		};
+		/** 返回一个 Date, 其 UTC 字段 == 配置时区的墙上时间(一律用 getUTC* 读取)。 */
+		const tzNow = (ms) => new Date((ms === undefined ? Date.now() : ms) + tzSec * 1000);
+
 		function formatClock(ms) {
 			if (!ms) return "—";
-			return new Date(ms).toLocaleTimeString();
+			const d = tzNow(ms);
+			const p = (n) => (n < 10 ? "0" : "") + n;
+			return p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
 		}
 		function formatClockShort(ms) {
 			if (!ms) return "—";
-			const d = new Date(ms);
+			const d = tzNow(ms);
 			const p = (n) => (n < 10 ? "0" : "") + n;
-			return p(d.getHours()) + ":" + p(d.getMinutes());
+			return p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
 		}
 		function formatPercent(rate) {
 			if (rate === null || rate === undefined) return "—";
@@ -230,13 +251,6 @@ window.__ModuleLoader__.load({
 				nextIsPeak,
 			};
 		}
-		function durationText(min, t) {
-			if (!Number.isFinite(min) || min <= 0) return t("pv.dur.now");
-			const h = Math.floor(min / 60), m = min % 60;
-			if (h > 0 && m > 0) return t("pv.dur.hm", { h, m });
-			if (h > 0) return t("pv.dur.h", { h });
-			return t("pv.dur.m", { m });
-		}
 		function durationCompact(min) {
 			if (!Number.isFinite(min) || min <= 0) return "0m";
 			const h = Math.floor(min / 60), m = min % 60;
@@ -246,6 +260,12 @@ window.__ModuleLoader__.load({
 
 		//#region store(单例: 页面级共享一个轮询器)
 		const DEFAULT_POLL_MS = 30000;
+		// 浏览器级偏好: 面板语言与热力图展开状态。宿主配置(改一次要重启)不适合承载纯展示偏好。
+		const PREF_LANG = "dsh-usage-dashboard.lang";
+		const PREF_HM_OPEN = "dsh-usage-dashboard.heatmapOpen";
+		const readPref = (key) => { try { return localStorage.getItem(key); } catch { return null; } };
+		const writePref = (key, value) => { try { localStorage.setItem(key, value); } catch { /* 隐私模式/禁用存储时静默降级为内存态 */ } };
+		const storedLang = readPref(PREF_LANG);
 		let snapshot = {
 			status: "loading",
 			payload: null,
@@ -263,6 +283,8 @@ window.__ModuleLoader__.load({
 			settingsOpen: false,
 			saving: false,
 			saveMessage: null,
+			lang: storedLang === "zh" || storedLang === "en" ? storedLang : "auto",
+			hmOpen: readPref(PREF_HM_OPEN) === "1",
 		};
 		const listeners = new Set();
 		let timer = null;
@@ -282,6 +304,7 @@ window.__ModuleLoader__.load({
 					const res = await fetch(url, { cache: "no-store", headers: { accept: "application/json" } });
 					if (!res.ok) throw new Error("HTTP " + res.status);
 					const data = await res.json();
+					setTimezoneOffsetSec(data.config?.timezoneOffsetSec);
 					if (typeof data.config?.clientPollIntervalMs === "number" && data.config.clientPollIntervalMs >= 5000) {
 						pollMs = Math.min(data.config.clientPollIntervalMs, 3600000);
 					}
@@ -304,7 +327,7 @@ window.__ModuleLoader__.load({
 			}, pollMs);
 		};
 
-		const nowMonth = () => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 1 }; };
+		const nowMonth = () => { const d = tzNow(); return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 }; };
 
 		const monthAdd = (year, month, delta) => {
 			let m = month + delta, y = year;
@@ -392,9 +415,19 @@ window.__ModuleLoader__.load({
 			setModelTab(tab) { set({ modelTab: tab }); },
 			setDonutRange(range) { set({ donutRange: range, donutOffset: 0 }); },
 			setDonutOffset(offset) { set({ donutOffset: Math.min(0, offset) }); },
+			setLang(lang) {
+				const next = lang === "zh" || lang === "en" ? lang : "auto";
+				writePref(PREF_LANG, next);
+				set({ lang: next });
+			},
+			toggleHeatmap() {
+				const next = !snapshot.hmOpen;
+				writePref(PREF_HM_OPEN, next ? "1" : "0");
+				set({ hmOpen: next });
+			},
 			openSettings() { set({ settingsOpen: true, saveMessage: null }); },
 			closeSettings() { set({ settingsOpen: false }); },
-			async saveToken(token) {
+			async saveToken(token, t) {
 				set({ saving: true, saveMessage: null });
 				try {
 					const res = await fetch("/usage-dashboard/config", {
@@ -405,16 +438,19 @@ window.__ModuleLoader__.load({
 					});
 					const data = await res.json().catch(() => ({}));
 					if (data.ok === true) {
-						set({ saving: false, saveMessage: { ok: true, text: "userToken 已保存并验证通过" } });
+						set({ saving: false, saveMessage: { ok: true, text: t("settings.msg.tokenSaved") } });
 						refreshStatus(true);
 					} else {
-						set({ saving: false, saveMessage: { ok: false, text: "验证失败: " + (data.error ?? "token 无效或已过期") } });
+						// token 本身无效时给人话(本地化), 其它错误(HTTP/网络)保留原始信息便于排查
+						const raw = typeof data.error === "string" ? data.error : "";
+						const detail = data.tokenInvalid === true ? t("settings.msg.tokenInvalid") : (raw || t("settings.msg.tokenInvalid"));
+						set({ saving: false, saveMessage: { ok: false, text: t("settings.msg.saveFailed", { error: detail }) } });
 					}
 				} catch (error) {
 					set({ saving: false, saveMessage: { ok: false, text: error instanceof Error ? error.message : String(error) } });
 				}
 			},
-			async clearToken() {
+			async clearToken(t) {
 				set({ saving: true, saveMessage: null });
 				try {
 					await fetch("/usage-dashboard/config", {
@@ -423,7 +459,7 @@ window.__ModuleLoader__.load({
 						headers: { "content-type": "application/json", accept: "application/json" },
 						body: JSON.stringify({ platformToken: "" }),
 					});
-					set({ saving: false, saveMessage: { ok: true, text: "已清除 userToken" } });
+					set({ saving: false, saveMessage: { ok: true, text: t("settings.msg.cleared") } });
 					refreshStatus(true);
 				} catch (error) {
 					set({ saving: false, saveMessage: { ok: false, text: error instanceof Error ? error.message : String(error) } });
@@ -435,7 +471,6 @@ window.__ModuleLoader__.load({
 		//#region locale
 		const NS = "usageDashboard";
 		const zh = {
-			"pill.balance": "余额 {amount}",
 			"pill.loading": "用量数据加载中…",
 			"pill.error": "用量数据不可用",
 			"panel.title": "DeepSeek 用量仪表盘",
@@ -453,17 +488,13 @@ window.__ModuleLoader__.load({
 			"chip.todayTokens": "今日 Token",
 			"chip.monthCost": "本月金额",
 			"chip.monthTokens": "本月 Token",
-			"chip.requests": "请求数",
-			"chip.cacheHit": "缓存命中率",
 			"tab.cost": "金额",
 			"tab.tokens": "Token",
-			"chart.empty": "本月暂无数据",
-			"chart.axisToken": "峰值 {v} tokens/日",
 			"models.title": "模型分布",
 			"footer.updated": "数据更新于 {time}",
 			"footer.source": "数据来源: ",
 			"footer.platform": "DeepSeek 开放平台 · 官方",
-			"footer.version": "v1.1.1",
+			"footer.version": "v{version}",
 			"footer.errSummary": "平台用量接口异常: {error}",
 			"footer.errOfficial": "官方余额接口异常: {error}",
 			"settings.title": "用量仪表盘设置",
@@ -482,17 +513,12 @@ window.__ModuleLoader__.load({
 			"settings.update.hint": "发现新版本 v{latest}(当前 v{current})。在 Harness 所在终端运行 dsh plugin --profile web update deepseek-harness-usage-dashboard 即可升级。",
 			"settings.status.hasToken": "已配置 token(来源: {source})",
 			"settings.status.noToken": "未配置 token",
-			"pv.peak.short": "峰",
-			"pv.valley.short": "谷",
+			"settings.source.env": "环境变量 DEEPSEEK_PLATFORM_TOKEN",
+			"settings.source.secret-file": "本地密钥文件",
+			"settings.source.none": "未设置",
 			"pv.banner.peak.title": "⚡ 当前峰时 · 价格高位",
-			"pv.banner.peak.count": "距谷时还有 {time} · 非紧急任务建议延后",
 			"pv.banner.valley.title": "🌙 当前谷时 · 约 5 折优惠中",
-			"pv.banner.valley.count": "距下次峰时还有 {time} · 适合批量跑任务",
 			"pv.windowsTip": "峰时 {windows}(北京时间), 其余谷时约 5 折 — 以官方实时费率为准",
-			"pv.dur.hm": "{h} 小时 {m} 分",
-			"pv.dur.h": "{h} 小时",
-			"pv.dur.m": "{m} 分钟",
-			"pv.dur.now": "即将",
 			"hm.caption": "近 {n} 个月每日{what} · 颜色越深越高",
 			"hm.empty": "暂无用量数据",
 			"hm.monthFail": "部分月份用量加载失败: {error}",
@@ -511,9 +537,32 @@ window.__ModuleLoader__.load({
 			"pv.next.peak": "距峰时",
 			"pv.banner.peak.hint": "建议延后至谷时",
 			"pv.banner.valley.hint": "适合批量任务",
+			"date.md": "{month}月{day}日",
+			"hm.title": "用量热力图",
+			"hm.expand": "展开热力图",
+			"hm.collapse": "收起热力图",
+			"hm.tip.requests": "{n} 请求",
+			"hm.tip.hit": "命中 {pct}",
+			"hm.tip.today": "今天",
+			"models.sort.cost": "按金额",
+			"models.sort.tokens": "按 Token",
+			"models.alt.cost": "金额: {amount}",
+			"models.alt.tokens": "Token: {amount}",
+			"models.nav.prev": "上一期",
+			"models.nav.next": "下一期",
+			"models.period.range": "{from}–{to}",
+			"settings.language.label": "面板语言",
+			"settings.language.hint": "只影响本面板。选“跟随界面”时跟随 Harness 语言(内置仅中文/英文,其他语言回退英文)。",
+			"settings.language.auto": "跟随界面",
+			"settings.language.zh": "中文",
+			"settings.language.en": "English",
+			"settings.msg.tokenSaved": "userToken 已保存并验证通过",
+			"settings.msg.saveFailed": "验证失败: {error}",
+			"settings.msg.tokenInvalid": "userToken 无效或已过期",
+			"settings.msg.cleared": "已清除 userToken",
+			"settings.token.unset": "未设置",
 		};
 		const en = {
-			"pill.balance": "Balance {amount}",
 			"pill.loading": "Loading usage…",
 			"pill.error": "Usage unavailable",
 			"panel.title": "DeepSeek Usage Dashboard",
@@ -521,8 +570,8 @@ window.__ModuleLoader__.load({
 			"panel.settings": "Settings",
 			"panel.close": "Close",
 			"panel.noToken.title": "Platform userToken not configured",
-			"panel.noToken.desc": "Billed usage comes from platform.deepseek.com private usage APIs; paste your userToken once (browser localStorage) to sync real spend data.",
-			"panel.noToken.action": "Open settings to paste token",
+			"panel.noToken.desc": "Billed usage comes from platform.deepseek.com's undocumented usage APIs. Sign in there, copy your userToken from the browser's localStorage once, and paste it here to sync real spend data.",
+			"panel.noToken.action": "Open settings to paste your token",
 			"panel.tokenExpired": "userToken expired — sign in to platform.deepseek.com again and update it in settings.",
 			"balance.total": "Account balance",
 			"balance.topup": "Top-up {amount}",
@@ -531,23 +580,19 @@ window.__ModuleLoader__.load({
 			"chip.todayTokens": "Today tokens",
 			"chip.monthCost": "Month amount",
 			"chip.monthTokens": "Month tokens",
-			"chip.requests": "Requests",
-			"chip.cacheHit": "Cache hit rate",
 			"tab.cost": "Amount",
 			"tab.tokens": "Tokens",
-			"chart.empty": "No data this month",
-			"chart.axisToken": "Peak {v} tokens/day",
-			"models.title": "Model breakdown",
+			"models.title": "Models",
 			"footer.updated": "Updated {time}",
 			"footer.source": "Data source: ",
 			"footer.platform": "DeepSeek Platform · Official",
-			"footer.version": "v1.1.1",
+			"footer.version": "v{version}",
 			"footer.errSummary": "Platform usage API error: {error}",
 			"footer.errOfficial": "Official balance API error: {error}",
 			"settings.title": "Usage Dashboard Settings",
 			"settings.close": "Close",
 			"settings.token.label": "Platform userToken",
-			"settings.token.hint": "Get it (~1 min): sign in to platform.deepseek.com in Chrome/Edge → press F12 → Application → Local Storage → click platform.deepseek.com → copy the Value of userToken (no field name, quotes, or spaces; if missing, refresh or re-sign in) and paste it above.\nSecurity: the token is stored only in a local 0600 host-side file and used only for read-only DeepSeek official queries; it never enters conversations, uploads, or third parties. The browser only sees a masked value — never paste it into a terminal, chat, or Issue.",
+			"settings.token.hint": "Get it (~1 min): sign in to platform.deepseek.com in Chrome/Edge → press F12 → Application → Local Storage → click platform.deepseek.com → copy the Value of userToken (no field name, quotes, or spaces; if missing, refresh the page or sign in again) and paste it above.\nSecurity: the token is stored only in a local 0600 host-side file and used only for read-only DeepSeek official queries; it never enters conversations, uploads, or third parties. The browser only sees a masked value — never paste it into a terminal, chat, or Issue.",
 			"settings.token.placeholder": "Paste userToken (current: {masked})",
 			"settings.token.save": "Verify & save",
 			"settings.token.clear": "Clear saved token",
@@ -560,17 +605,12 @@ window.__ModuleLoader__.load({
 			"settings.update.hint": "A new version v{latest} is available (current v{current}). Upgrade by running dsh plugin --profile web update deepseek-harness-usage-dashboard in the Harness terminal.",
 			"settings.status.hasToken": "Token configured (source: {source})",
 			"settings.status.noToken": "No token configured",
-			"pv.peak.short": "P",
-			"pv.valley.short": "V",
+			"settings.source.env": "DEEPSEEK_PLATFORM_TOKEN env var",
+			"settings.source.secret-file": "local secret file",
+			"settings.source.none": "not set",
 			"pv.banner.peak.title": "⚡ Peak hour · higher rates",
-			"pv.banner.peak.count": "Valley starts in {time} · consider deferring heavy tasks",
-			"pv.banner.valley.title": "🌙 Valley hour — ~50% off promo",
-			"pv.banner.valley.count": "Next peak in {time} · good time for batch tasks",
+			"pv.banner.valley.title": "🌙 Valley hour · ~50% off",
 			"pv.windowsTip": "Peak windows {windows} (Beijing time); other hours ~50% off — subject to official rates",
-			"pv.dur.hm": "{h}h {m}m",
-			"pv.dur.h": "{h}h",
-			"pv.dur.m": "{m} min",
-			"pv.dur.now": "imminent",
 			"hm.caption": "Daily {what} over the last {n} months · darker = higher",
 			"hm.empty": "No usage data yet",
 			"hm.monthFail": "Some months failed to load: {error}",
@@ -582,13 +622,67 @@ window.__ModuleLoader__.load({
 			"models.r.today": "Day",
 			"models.r.week": "Week",
 			"models.r.month": "Month",
-			"chip.requestsDay": "Requests (day)",
-			"chip.cacheHitMonth": "Cache hit (month)",
-			"chip.share": "Today is {pct}% of month",
+			"chip.requestsDay": "Today requests",
+			"chip.cacheHitMonth": "Cache hit rate",
+			"chip.share": "Today: {pct}% of the month",
 			"pv.next.valley": "valley in",
 			"pv.next.peak": "peak in",
 			"pv.banner.peak.hint": "Defer to valley hours",
 			"pv.banner.valley.hint": "Great for batch tasks",
+			"date.md": "{month}/{day}",
+			"hm.title": "Usage heatmap",
+			"hm.expand": "Expand heatmap",
+			"hm.collapse": "Collapse heatmap",
+			"hm.tip.requests": "{n} requests",
+			"hm.tip.hit": "cache hit {pct}",
+			"hm.tip.today": "today",
+			"models.sort.cost": "By amount",
+			"models.sort.tokens": "By tokens",
+			"models.alt.cost": "Amount: {amount}",
+			"models.alt.tokens": "Tokens: {amount}",
+			"models.nav.prev": "Previous period",
+			"models.nav.next": "Next period",
+			"models.period.range": "{from} – {to}",
+			"settings.language.label": "Panel language",
+			"settings.language.hint": "Affects this panel only. “Follow interface” follows the Harness language (only Chinese/English ship today; other languages fall back to English).",
+			"settings.language.auto": "Follow interface",
+			"settings.language.zh": "中文",
+			"settings.language.en": "English",
+			"settings.msg.tokenSaved": "userToken saved and verified",
+			"settings.msg.saveFailed": "Verification failed: {error}",
+			"settings.msg.tokenInvalid": "The token is invalid or expired.",
+			"settings.msg.cleared": "userToken cleared",
+			"settings.token.unset": "not set",
+		};
+		//#endregion
+
+		//#region i18n
+		/** 替换 {name} 占位符(与宿主 t 的行为一致, 供面板语言覆盖时使用)。 */
+		const interpolate = (template, vars) => (
+			vars === undefined || vars === null
+				? template
+				: String(template).replace(/\{(\w+)\}/g, (m, key) => (vars[key] === undefined || vars[key] === null ? m : String(vars[key])))
+		);
+		/**
+		 * 包一层宿主 t: lang 为 "auto" 时完全透传(跟随 Harness 界面语言),
+		 * 否则优先用面板自带词典(缺失键回落到宿主 t, 保证不会露出键名)。
+		 */
+		const wrapT = (t, lang) => {
+			const base = typeof t === "function" ? t : ((key) => key);
+			if (lang !== "zh" && lang !== "en") return base;
+			const dict = lang === "zh" ? zh : en;
+			return (key, vars) => (dict[key] === undefined ? base(key, vars) : interpolate(dict[key], vars));
+		};
+
+		/** 宿主 tokenSource 原始值("env" / "secret-file" / "none") → 本地化标签; 未知值原样显示。 */
+		const TOKEN_SOURCE_KEYS = {
+			env: "settings.source.env",
+			"secret-file": "settings.source.secret-file",
+			none: "settings.source.none",
+		};
+		const tokenSourceLabel = (source, t) => {
+			const key = TOKEN_SOURCE_KEYS[source];
+			return key === undefined ? String(source ?? "?") : t(key);
 		};
 		//#endregion
 
@@ -600,8 +694,8 @@ window.__ModuleLoader__.load({
 		const INext = _ui_primitives.IconChevronRightOutline14;
 
 		const todayDay = () => {
-			const d = new Date();
-			return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+			const d = tzNow();
+			return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 		};
 
 		function pickBalance(payload) {
@@ -616,6 +710,39 @@ window.__ModuleLoader__.load({
 			}
 			return null;
 		}
+
+		/**
+		 * 余额下方的「充值 / 赠送」明细: 优先官方 `/user/balance`(充值/赠送字段最准),
+		 * 官方接口失败时用平台 `get_user_summary` 的钱包兜底(normal_wallets → 充值, bonus_wallets → 赠送),
+		 * 两边都没有才不显示这一行。
+		 */
+		function balanceBreakdown(payload, fallbackCurrency) {
+			const info = payload?.official?.state === "ok" && Array.isArray(payload.official.payload?.balances)
+				? payload.official.payload.balances[0]
+				: null;
+			if (info !== null && info !== undefined) {
+				return {
+					toppedUp: info.toppedUp ?? 0,
+					granted: info.granted ?? 0,
+					currency: info.currency ?? fallbackCurrency ?? "CNY",
+				};
+			}
+			const wallets = payload?.summary?.state === "ok" ? payload.summary.payload : null;
+			if (wallets === null || wallets === undefined) return null;
+			const normal = Array.isArray(wallets.normalWallets) ? wallets.normalWallets[0] : null;
+			const bonus = Array.isArray(wallets.bonusWallets) ? wallets.bonusWallets[0] : null;
+			if (normal === null && bonus === null) return null;
+			return {
+				toppedUp: normal?.balance ?? 0,
+				granted: bonus?.balance ?? 0,
+				currency: normal?.currency ?? bonus?.currency ?? fallbackCurrency ?? "CNY",
+			};
+		}
+
+		/** 页脚「数据更新于」取真正展示的数据的抓取时间(月度 → 平台余额 → 官方余额 → 客户端抓取时刻)。 */
+		const dataFetchedAt = (payload, fallbackAt) => (
+			payload?.month?.fetchedAt || payload?.summary?.fetchedAt || payload?.official?.fetchedAt || fallbackAt || 0
+		);
 
 		function monthOfPayload(payload) {
 			if (payload?.month?.state === "ok" && payload.month.payload) return payload.month.payload;
@@ -637,7 +764,7 @@ window.__ModuleLoader__.load({
 		}
 		const hmDayKey = (y, m, d) => y + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;
 
-		function Heatmap({ months, tab, t }) {
+		function Heatmap({ months, tab, t, currency }) {
 			// 汇总窗口内每个日期的值(只统计加载成功的月份)
 			const dayMap = new Map();
 			let max = 0;
@@ -663,12 +790,12 @@ window.__ModuleLoader__.load({
 			if (months.length === 0) return react.createElement("div", null, t("hm.empty"));
 
 			const first = months[0];
-			let start = new Date(first.year, first.month - 1, 1);
-			const end = new Date(td.year, td.month - 1, td.day);
+			const start = new Date(Date.UTC(first.year, first.month - 1, 1));
+			const end = new Date(Date.UTC(td.year, td.month - 1, td.day));
 			if (end.getTime() < start.getTime()) return react.createElement("div", null, t("hm.empty"));
-			const dow0 = (start.getDay() + 6) % 7; // Mon=0
-			const gridStart = new Date(start.getFullYear(), start.getMonth(), start.getDate() - dow0);
-			const totalDays = Math.floor((end.getTime() - gridStart.getTime()) / 86400000) + 1;
+			const dow0 = (start.getUTCDay() + 6) % 7; // Mon=0
+			const gridStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - dow0));
+			const totalDays = Math.round((end.getTime() - gridStart.getTime()) / 86400000) + 1;
 			const weeks = Math.ceil(totalDays / 7);
 
 			const CELL = 11, GAP = 2, PITCH = CELL + GAP, PAD_X = 2;
@@ -678,11 +805,11 @@ window.__ModuleLoader__.load({
 			const cells = [];
 			const monthCols = [];
 			for (let i = 0; i < totalDays; i++) {
-				const dt = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+				const dt = new Date(Date.UTC(gridStart.getUTCFullYear(), gridStart.getUTCMonth(), gridStart.getUTCDate() + i));
 				const col = Math.floor(i / 7);
-				const row = (dt.getDay() + 6) % 7;
-				const key = hmDayKey(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
-				if (dt.getDate() === 1) monthCols.push({ ym: dt.getFullYear() * 12 + (dt.getMonth() + 1), y: dt.getFullYear(), m: dt.getMonth() + 1, col });
+				const row = (dt.getUTCDay() + 6) % 7;
+				const key = hmDayKey(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+				if (dt.getUTCDate() === 1) monthCols.push({ ym: dt.getUTCFullYear() * 12 + (dt.getUTCMonth() + 1), y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, col });
 				const rec = dayMap.get(key);
 				const x = PAD_X + col * PITCH;
 				const y = row * PITCH;
@@ -726,22 +853,23 @@ window.__ModuleLoader__.load({
 				const isToday = hover.key === hmDayKey(td.year, td.month, td.day);
 				const hasUse = rec !== undefined && (Number(rec.tokens) > 0 || Number(rec.requests) > 0);
 				const main = hasUse
-					? (tab === "cost" ? formatMoney(rec.cost, "CNY") : formatTokens(rec.tokens))
+					? (tab === "cost" ? formatMoney(rec.cost, currency ?? "CNY") : formatTokens(rec.tokens))
 					: null;
 				const subParts = [];
 				if (hasUse) {
-					subParts.push(String(rec.requests) + " 请求");
-					if (rec.input > 0) subParts.push("命中 " + formatPercent(rec.hit / rec.input));
+					subParts.push(t("hm.tip.requests", { n: rec.requests }));
+					if (rec.input > 0) subParts.push(t("hm.tip.hit", { pct: formatPercent(rec.hit / rec.input) }));
 				} else {
 					subParts.push(t("hm.tip.none"));
 				}
+				const dateLabel = t("date.md", { month: mm, day: dd }) + (isToday ? " · " + t("hm.tip.today") : "") + (yy !== td.year ? " " + yy : "");
 				return react.createElement("div", {
 					className: "dshud_tip",
 					key: "tip",
 					style: { left, top, transform },
 				}, [
 					react.createElement("div", { className: "dshud_tip_inner", key: "in" }, [
-						react.createElement("div", { className: "dshud_tip_date", key: "d" }, mm + "月" + dd + "日" + (isToday ? " · 今天" : "") + (yy !== td.year ? " " + yy : "")),
+						react.createElement("div", { className: "dshud_tip_date", key: "d" }, dateLabel),
 						main !== null ? react.createElement("div", { className: "dshud_tip_main", key: "m" }, main) : null,
 						subParts.length > 0 ? react.createElement("div", { className: "dshud_tip_sub", key: "s" }, subParts.join(" · ")) : null,
 					]),
@@ -794,23 +922,29 @@ window.__ModuleLoader__.load({
 		const colorOf = (i, isOther) => (isOther ? DONUT_OTHER : DONUT_COLORS[i % DONUT_COLORS.length]);
 
 		function ModelDonut({ totals, tab, t, currency }) {
-			const val = (m) => Number(tab === "cost" ? m.cost : m.tokens) || 0;
-			const segs = (totals || []).map((m) => ({ model: m.model ?? "unknown", v: val(m) }))
-				.filter((s) => s.v > 0)
-				.sort((a, b) => b.v - a.v);
-			const grand = segs.reduce((a, s) => a + s.v, 0);
+			const pick = (m) => (tab === "cost" ? m.cost : m.tokens);
+			const segs = (totals || []).map((m) => ({
+				model: m.model ?? "unknown",
+				cost: Number(m.cost) || 0,
+				tokens: Number(m.tokens) || 0,
+			}))
+				.filter((s) => s.cost > 0 || s.tokens > 0)
+				.sort((a, b) => pick(b) - pick(a));
+			const grand = segs.reduce((a, s) => a + pick(s), 0);
 			if (segs.length === 0 || grand <= 0) {
 				return react.createElement("div", { className: "dshud_models_empty" }, t("models.none"));
 			}
 			// 保留份额 >=1.5% 的前 8 名, 其余并入"其他"(灰色)
 			const big = [];
 			let smallSum = 0;
+			let smallCost = 0;
+			let smallTokens = 0;
 			for (const s of segs) {
-				if (big.length < 8 && s.v / grand >= 0.015) big.push(s);
-				else smallSum += s.v;
+				if (big.length < 8 && pick(s) / grand >= 0.015) big.push(s);
+				else { smallSum += pick(s); smallCost += s.cost; smallTokens += s.tokens; }
 			}
-			const finalSegs = big.map((s) => ({ model: s.model, v: s.v, isOther: false }));
-			if (smallSum > 0) finalSegs.push({ model: t("models.other"), v: smallSum, isOther: true });
+			const finalSegs = big.map((s) => ({ model: s.model, v: pick(s), cost: s.cost, tokens: s.tokens, isOther: false }));
+			if (smallSum > 0 || smallCost > 0 || smallTokens > 0) finalSegs.push({ model: t("models.other"), v: smallSum, cost: smallCost, tokens: smallTokens, isOther: true });
 
 			const S = 128, CX = 64, CY = 64, R = 48, SW = 15, GAP = 2.5;
 			const C = 2 * Math.PI * R;
@@ -843,14 +977,25 @@ window.__ModuleLoader__.load({
 					]),
 				]),
 				react.createElement("div", { className: "dshud_donut_legend", key: "l" },
-					finalSegs.map((s, i) => react.createElement("div", { className: "dshud_dleg_row", key: s.model + "_" + i, title: s.model }, [
-						react.createElement("span", { className: "dshud_dleg_dot", key: "dot", style: { background: colorOf(i, s.isOther) } }),
-						react.createElement("span", { className: "dshud_dleg_name", key: "n" }, s.model),
-						react.createElement("span", { className: "dshud_dleg_meta", key: "m" }, [
-							react.createElement("span", { className: "dshud_dleg_val", key: "v" }, tab === "cost" ? formatMoney(s.v, currency) : formatTokens(Math.round(s.v))),
-							react.createElement("span", { className: "dshud_dleg_pct", key: "p" }, (s.v / grand * 100).toFixed(1) + "%"),
-						]),
-					])),
+					finalSegs.map((s, i) => {
+						// 主值跟随排序维度, 另一个维度以同排小字常显(cost=0 时显示 ¥0.00, 不留空)
+						const primary = tab === "cost" ? formatMoney(s.cost, currency) : formatTokens(Math.round(s.tokens));
+						const secondary = tab === "cost" ? formatTokens(Math.round(s.tokens)) : formatMoney(s.cost, currency);
+						const altLabel = tab === "cost"
+							? t("models.alt.tokens", { amount: secondary })
+							: t("models.alt.cost", { amount: secondary });
+						return react.createElement("div", { className: "dshud_dleg_row", key: s.model + "_" + i, title: s.model }, [
+							react.createElement("span", { className: "dshud_dleg_dot", key: "dot", style: { background: colorOf(i, s.isOther) } }),
+							react.createElement("span", { className: "dshud_dleg_name", key: "n" }, s.model),
+							react.createElement("span", { className: "dshud_dleg_meta", key: "m" }, [
+								react.createElement("span", { className: "dshud_dleg_valrow", key: "vr" }, [
+									react.createElement("span", { className: "dshud_dleg_val", key: "v" }, primary),
+									react.createElement("span", { className: "dshud_dleg_alt", key: "a", title: altLabel }, secondary),
+								]),
+								react.createElement("span", { className: "dshud_dleg_pct", key: "p" }, (s.v / grand * 100).toFixed(1) + "%"),
+							]),
+						]);
+					}),
 				),
 			]);
 		}
@@ -888,7 +1033,7 @@ window.__ModuleLoader__.load({
 
 			const header = react.createElement("div", { className: "dshud_header", key: "head" }, [
 				react.createElement("span", { className: "dshud_title", key: "title" }, t("panel.title")),
-				react.createElement("span", { className: "dshud_updated", key: "upd" }, t("footer.updated", { time: formatClockShort(payload?.official?.fetchedAt ?? snap.at) })),
+				react.createElement("span", { className: "dshud_updated", key: "upd" }, t("footer.updated", { time: formatClockShort(dataFetchedAt(payload, snap.at)) })),
 				react.createElement("button", { className: "dshud_iconbtn", key: "refresh", title: t("panel.refresh"), "aria-label": t("panel.refresh"), onClick: () => { refreshStatus(true); loadUsage(true); }, children: react.createElement(IRefresh, null) }),
 				react.createElement("button", { className: "dshud_iconbtn", key: "settings", title: t("panel.settings"), "aria-label": t("panel.settings"), onClick: store.openSettings, children: react.createElement(ISettings, null) }),
 				react.createElement("button", { className: "dshud_iconbtn", key: "close", title: t("panel.close"), "aria-label": t("panel.close"), onClick: store.toggle, children: react.createElement(IClose, null) }),
@@ -917,8 +1062,7 @@ window.__ModuleLoader__.load({
 
 			// 余额区
 			if (balance !== null) {
-				const sub = payload.official?.state === "ok" && Array.isArray(payload.official.payload?.balances) && payload.official.payload.balances.length > 0
-					? payload.official.payload.balances[0] : null;
+				const sub = balanceBreakdown(payload, balance.currency);
 				bodyChildren.push(react.createElement("div", { className: "dshud_balance_row", key: "bal" }, [
 					react.createElement("div", { key: "main" }, [
 						react.createElement("div", { className: "dshud_balance_main" }, formatMoney(balance.amount, balance.currency)),
@@ -947,6 +1091,11 @@ window.__ModuleLoader__.load({
 			// 今日/本月 指标(3×2 网格; 今日卡带"占本月"进度条)
 			const view = currentMonth;
 			const todayEntry = view ? (view.days ?? []).find((d) => d.day === td.day) : null;
+			// 币种跟随账户: 月度 payload → 平台余额 → 官方余额 → CNY(不做汇率换算, 平台给什么显示什么)
+			const currency = view?.currency
+				?? payload?.summary?.payload?.currency
+				?? payload?.official?.payload?.balances?.[0]?.currency
+				?? "CNY";
 			if (view !== null && view !== undefined && (view.days?.length ?? 0) > 0) {
 				const monthCost = view.totals?.cost ?? 0;
 				const monthTokens = view.totals?.tokens ?? 0;
@@ -965,33 +1114,50 @@ window.__ModuleLoader__.load({
 					]),
 				]);
 				bodyChildren.push(react.createElement("div", { className: "dshud_chips", key: "chips" }, [
-					chipNode("tc", t("chip.todayCost"), formatMoney(dayCost, "CNY"), [dayCost, monthCost]),
+					chipNode("tc", t("chip.todayCost"), formatMoney(dayCost, currency), [dayCost, monthCost]),
 					chipNode("tt", t("chip.todayTokens"), formatTokens(dayTokens), [dayTokens, monthTokens]),
 					chipNode("rd", t("chip.requestsDay"), String(todayEntry?.requests ?? 0), null),
-					chipNode("mc", t("chip.monthCost"), formatMoney(monthCost, "CNY"), null),
+					chipNode("mc", t("chip.monthCost"), formatMoney(monthCost, currency), null),
 					chipNode("mt", t("chip.monthTokens"), formatTokens(monthTokens), null),
 					chipNode("ch", t("chip.cacheHitMonth"), view.cacheHitRate === null || view.cacheHitRate === undefined ? "—" : formatPercent(view.cacheHitRate), null),
 				]));
 			}
 
-			// 图表(热力图, 近 N 个月; 无月度翻页)
-			bodyChildren.push(react.createElement("div", { className: "dshud_tabs", key: "tabs" }, [
-				react.createElement("button", { className: "dshud_tab" + (snap.tab === "cost" ? " dshud_tab_active" : ""), onClick: () => store.setTab("cost"), key: "cost" }, t("tab.cost")),
-				react.createElement("button", { className: "dshud_tab" + (snap.tab === "tokens" ? " dshud_tab_active" : ""), onClick: () => store.setTab("tokens"), key: "tok" }, t("tab.tokens")),
+			// 热力图(默认收起: 直接缩短面板; 展开状态记在浏览器本地偏好)
+			const hmOpen = snap.hmOpen === true;
+			bodyChildren.push(react.createElement("div", { className: "dshud_sect_head", key: "hmhead" }, [
+				react.createElement("button", {
+					className: "dshud_hm_toggle",
+					key: "toggle",
+					onClick: store.toggleHeatmap,
+					"aria-expanded": hmOpen,
+					title: hmOpen ? t("hm.collapse") : t("hm.expand"),
+					"aria-label": hmOpen ? t("hm.collapse") : t("hm.expand"),
+				}, [
+					react.createElement("span", { className: "dshud_chev" + (hmOpen ? " dshud_chev_open" : ""), key: "chev" }, react.createElement(INext, null)),
+					react.createElement("span", { className: "dshud_field_label", key: "label" }, t("hm.title")),
+				]),
 			]));
-			if (snap.usageState === "loading" && snap.usageMonths === null) {
-				bodyChildren.push(react.createElement("div", { className: "dshud_caption", key: "hmload" }, t("pill.loading")));
-			} else if (snap.usageMonths !== null && snap.usageMonths.length > 0) {
-				bodyChildren.push(react.createElement("div", { className: "dshud_caption", key: "hmcap" }, t("hm.caption", {
-					n: snap.usageMonths.length,
-					what: snap.tab === "cost" ? t("tab.cost") : t("tab.tokens"),
-				})));
-				bodyChildren.push(react.createElement(Heatmap, { months: snap.usageMonths, tab: snap.tab, t, key: "hm" }));
-			} else {
-				bodyChildren.push(react.createElement("div", { className: "dshud_err", key: "hmempty" }, t("hm.empty")));
-			}
-			if (snap.usageError !== null && snap.usageError !== undefined) {
-				bodyChildren.push(react.createElement("div", { className: "dshud_err", key: "hmerr" }, t("hm.monthFail", { error: snap.usageError })));
+			if (hmOpen) {
+				bodyChildren.push(react.createElement("div", { className: "dshud_tabs", key: "tabs" }, [
+					react.createElement("button", { className: "dshud_tab" + (snap.tab === "cost" ? " dshud_tab_active" : ""), onClick: () => store.setTab("cost"), key: "cost" }, t("tab.cost")),
+					react.createElement("button", { className: "dshud_tab" + (snap.tab === "tokens" ? " dshud_tab_active" : ""), onClick: () => store.setTab("tokens"), key: "tok" }, t("tab.tokens")),
+				]));
+				if (snap.usageState === "loading" && snap.usageMonths === null) {
+					bodyChildren.push(react.createElement("div", { className: "dshud_caption", key: "hmload" }, t("pill.loading")));
+				} else if (snap.usageMonths !== null && snap.usageMonths.length > 0) {
+					bodyChildren.push(react.createElement("div", { className: "dshud_caption", key: "hmcap" }, t("hm.caption", {
+						n: snap.usageMonths.length,
+						// 该词在句中被引用, 英文需要小写(中文无影响)
+						what: (snap.tab === "cost" ? t("tab.cost") : t("tab.tokens")).toLowerCase(),
+					})));
+					bodyChildren.push(react.createElement(Heatmap, { months: snap.usageMonths, tab: snap.tab, t, currency, key: "hm" }));
+				} else {
+					bodyChildren.push(react.createElement("div", { className: "dshud_err", key: "hmempty" }, t("hm.empty")));
+				}
+				if (snap.usageError !== null && snap.usageError !== undefined) {
+					bodyChildren.push(react.createElement("div", { className: "dshud_err", key: "hmerr" }, t("hm.monthFail", { error: snap.usageError })));
+				}
 			}
 
 			// 模型分布(环形图, 可按 日/周/月 左右翻看)
@@ -1018,29 +1184,32 @@ window.__ModuleLoader__.load({
 						for (const en of snap.usageMonths) payloads.push(en.payload);
 					}
 					const byDate = modelsByDate(payloads);
-					const tdDate = new Date(td.year, td.month - 1, td.day);
-					const keyOf = (d) => hmDayKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
+					const tdDate = new Date(Date.UTC(td.year, td.month - 1, td.day));
+					const keyOf = (d) => hmDayKey(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
 					const lists = [];
 					let periodStart = null;
 					if (range === "today") {
-						periodStart = new Date(tdDate.getFullYear(), tdDate.getMonth(), tdDate.getDate() + k);
+						periodStart = new Date(Date.UTC(tdDate.getUTCFullYear(), tdDate.getUTCMonth(), tdDate.getUTCDate() + k));
 						const hit = byDate.get(keyOf(periodStart));
 						if (hit !== undefined) lists.push(hit);
-						donutLabel = (periodStart.getMonth() + 1) + "月" + periodStart.getDate() + "日";
+						donutLabel = t("date.md", { month: periodStart.getUTCMonth() + 1, day: periodStart.getUTCDate() });
 					} else {
-						const off = (tdDate.getDay() + 6) % 7;
-						periodStart = new Date(tdDate.getFullYear(), tdDate.getMonth(), tdDate.getDate() - off + 7 * k);
+						const off = (tdDate.getUTCDay() + 6) % 7;
+						periodStart = new Date(Date.UTC(tdDate.getUTCFullYear(), tdDate.getUTCMonth(), tdDate.getUTCDate() - off + 7 * k));
 						for (let i = 0; i < 7; i++) {
-							const dt = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate() + i);
+							const dt = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), periodStart.getUTCDate() + i));
 							if (dt.getTime() > tdDate.getTime()) break;
 							const hit = byDate.get(keyOf(dt));
 							if (hit !== undefined) lists.push(hit);
 						}
-						const weekEnd = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate() + 6);
-						donutLabel = (periodStart.getMonth() + 1) + "月" + periodStart.getDate() + "日–" + (weekEnd.getMonth() + 1) + "月" + weekEnd.getDate() + "日";
+						const weekEnd = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth(), periodStart.getUTCDate() + 6));
+						donutLabel = t("models.period.range", {
+							from: t("date.md", { month: periodStart.getUTCMonth() + 1, day: periodStart.getUTCDate() }),
+							to: t("date.md", { month: weekEnd.getUTCMonth() + 1, day: weekEnd.getUTCDate() }),
+						});
 					}
 					donutTotals = sumModelLists(lists);
-					// 用最早可用日期限制可回看范围
+					// 用最早可用日期限制可回看范围("YYYY-MM-DD" 本就按 UTC 解析)
 					let oldest = null;
 					for (const key of byDate.keys()) {
 						const t = new Date(key);
@@ -1056,8 +1225,8 @@ window.__ModuleLoader__.load({
 				bodyChildren.push(react.createElement("div", { className: "dshud_sect_head", key: "modelshead" }, [
 					react.createElement("span", { className: "dshud_field_label", key: "h" }, t("models.title")),
 					react.createElement("div", { className: "dshud_sec_tabs", key: "tabd" }, [
-						react.createElement("button", { className: "dshud_sec_tab" + (snap.modelTab === "cost" ? " dshud_sec_tab_active" : ""), onClick: () => store.setModelTab("cost"), key: "cost" }, t("tab.cost")),
-						react.createElement("button", { className: "dshud_sec_tab" + (snap.modelTab === "tokens" ? " dshud_sec_tab_active" : ""), onClick: () => store.setModelTab("tokens"), key: "tok" }, t("tab.tokens")),
+						react.createElement("button", { className: "dshud_sec_tab" + (snap.modelTab === "cost" ? " dshud_sec_tab_active" : ""), onClick: () => store.setModelTab("cost"), key: "cost", title: t("models.sort.cost") }, t("models.sort.cost")),
+						react.createElement("button", { className: "dshud_sec_tab" + (snap.modelTab === "tokens" ? " dshud_sec_tab_active" : ""), onClick: () => store.setModelTab("tokens"), key: "tok", title: t("models.sort.tokens") }, t("models.sort.tokens")),
 					]),
 					react.createElement("div", { className: "dshud_sec_tabs", key: "tabr" }, [
 						react.createElement("button", { className: "dshud_sec_tab" + ((snap.donutRange ?? "month") === "today" ? " dshud_sec_tab_active" : ""), onClick: () => store.setDonutRange("today"), key: "today" }, t("models.r.today")),
@@ -1066,9 +1235,9 @@ window.__ModuleLoader__.load({
 					]),
 				]));
 				bodyChildren.push(react.createElement("div", { className: "dshud_periodrow", key: "periodnav" }, [
-					react.createElement("button", { className: "dshud_iconbtn", key: "prev", onClick: () => store.setDonutOffset((snap.donutOffset ?? 0) - 1), disabled: !canPrev, "aria-label": "上一期", title: "上一期", children: react.createElement(IPrev, null) }),
+					react.createElement("button", { className: "dshud_iconbtn", key: "prev", onClick: () => store.setDonutOffset((snap.donutOffset ?? 0) - 1), disabled: !canPrev, "aria-label": t("models.nav.prev"), title: t("models.nav.prev"), children: react.createElement(IPrev, null) }),
 					react.createElement("span", { className: "dshud_periodlabel", key: "label" }, donutLabel),
-					react.createElement("button", { className: "dshud_iconbtn", key: "next", onClick: () => store.setDonutOffset((snap.donutOffset ?? 0) + 1), disabled: !canNext, "aria-label": "下一期", title: "下一期", children: react.createElement(INext, null) }),
+					react.createElement("button", { className: "dshud_iconbtn", key: "next", onClick: () => store.setDonutOffset((snap.donutOffset ?? 0) + 1), disabled: !canNext, "aria-label": t("models.nav.next"), title: t("models.nav.next"), children: react.createElement(INext, null) }),
 				]));
 				bodyChildren.push(donutTotals.length === 0
 					? react.createElement("div", { className: "dshud_models_empty", key: "donutempty" }, donutLabel + " · " + t("models.none"))
@@ -1076,7 +1245,7 @@ window.__ModuleLoader__.load({
 						totals: donutTotals,
 						tab: snap.modelTab,
 						t,
-						currency: currentMonth.currency ?? "CNY",
+						currency: currentMonth.currency ?? currency,
 						key: "donut",
 					}));
 			}
@@ -1094,7 +1263,7 @@ window.__ModuleLoader__.load({
 						rel: "noreferrer",
 					}, t("footer.platform")),
 				]),
-				react.createElement("span", { className: "dshud_footer_ver", key: "ver" }, t("footer.version")),
+				react.createElement("span", { className: "dshud_footer_ver", key: "ver" }, t("footer.version", { version: payload?.update?.currentVersion || "—" })),
 			]));
 			if (payload?.official?.state === "error") {
 				footerItems.push(react.createElement("span", { className: "dshud_err", key: "oe" }, t("footer.errOfficial", { error: payload.official.error ?? "" })));
@@ -1141,9 +1310,19 @@ window.__ModuleLoader__.load({
 						react.createElement("button", { className: "dshud_iconbtn", key: "x", onClick: store.closeSettings, title: t("settings.close"), "aria-label": t("settings.close"), children: react.createElement(IClose, null) }),
 					]),
 					react.createElement("div", { className: "dshud_modal_body", key: "b" }, [
+						react.createElement("div", { className: "dshud_field", key: "lang" }, [
+							react.createElement("span", { className: "dshud_field_label" }, t("settings.language.label")),
+							react.createElement("div", { className: "dshud_sec_tabs", key: "langtabs", style: { alignSelf: "flex-start" } },
+								[["auto", "settings.language.auto"], ["zh", "settings.language.zh"], ["en", "settings.language.en"]].map(([id, key]) => react.createElement("button", {
+									key: id,
+									className: "dshud_sec_tab" + ((snap.lang ?? "auto") === id ? " dshud_sec_tab_active" : ""),
+									onClick: () => store.setLang(id),
+								}, t(key)))),
+							react.createElement("span", { className: "dshud_field_hint" }, t("settings.language.hint")),
+						]),
 						react.createElement("div", { className: "dshud_field", key: "status" }, [
 							react.createElement("span", { className: "dshud_field_label" }, t("settings.token.label")),
-							react.createElement("span", { className: "dshud_field_hint" }, hasToken ? t("settings.status.hasToken", { source: payload?.tokenSource ?? "?" }) : t("settings.status.noToken")),
+							react.createElement("span", { className: "dshud_field_hint" }, hasToken ? t("settings.status.hasToken", { source: tokenSourceLabel(payload?.tokenSource, t) }) : t("settings.status.noToken")),
 						]),
 						react.createElement("div", { className: "dshud_field", key: "input" }, [
 							react.createElement("textarea", {
@@ -1151,17 +1330,17 @@ window.__ModuleLoader__.load({
 								rows: 3,
 								value: token,
 								onChange: (e) => setToken(e.target.value),
-								placeholder: t("settings.token.placeholder", { masked: masked || "未设置" }),
+								placeholder: t("settings.token.placeholder", { masked: masked || t("settings.token.unset") }),
 								spellCheck: false,
 							}),
 							react.createElement("span", { className: "dshud_field_hint" }, t("settings.token.hint")),
 						]),
 						react.createElement("div", { className: "dshud_btnrow", key: "tokenbtns" }, [
-							hasToken ? react.createElement("button", { className: "dshud_btn dshud_btn_danger", key: "clear", onClick: () => store.clearToken(), disabled: snap.saving }, t("settings.token.clear")) : null,
+							hasToken ? react.createElement("button", { className: "dshud_btn dshud_btn_danger", key: "clear", onClick: () => store.clearToken(t), disabled: snap.saving }, t("settings.token.clear")) : null,
 							react.createElement("button", {
 								className: "dshud_btn dshud_btn_primary",
 								key: "save",
-								onClick: () => store.saveToken(token),
+								onClick: () => store.saveToken(token, t),
 								disabled: snap.saving || token.trim() === "",
 							}, snap.saving ? t("settings.token.saving") : t("settings.token.save")),
 						]),
@@ -1224,9 +1403,11 @@ window.__ModuleLoader__.load({
 					locale: NS,
 				}, function OverlayEntry(props) {
 					const snap = react.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+					// 面板语言: auto 时透传宿主 t(跟随 Harness 界面语言), 否则用面板自带词典覆盖
+					const t = react.useMemo(() => wrapT(props.t, snap.lang), [props.t, snap.lang]);
 					return react.createElement(react.Fragment, null, [
-						react.createElement(Panel, { key: "panel", t: props.t ?? ((k, vars) => k) }),
-						snap.settingsOpen ? react.createElement(SettingsModal, { key: "settings", t: props.t ?? ((k, vars) => k) }) : null,
+						react.createElement(Panel, { key: "panel", t }),
+						snap.settingsOpen ? react.createElement(SettingsModal, { key: "settings", t }) : null,
 					]);
 				});
 				return () => dispose();
