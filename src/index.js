@@ -54,6 +54,8 @@ export const Config = Schema.object({
   checkUpdate: Schema.boolean().default(true),
   /** 检查新版本的频率(ms) */
   updateCheckIntervalMs: Schema.number().min(60000).default(21600000),
+  /** 面板「升级」徽标一键复制的内容; 换了 profile 名或安装方式不同时改这里 */
+  updateCommand: Schema.string().default('dsh plugin --profile web update deepseek-harness-usage-dashboard'),
 })
 
 // ---------------------------------------------------------------------------
@@ -367,6 +369,9 @@ export function apply(ctx, config) {
       : ['09:00-12:00', '14:00-18:00'],
     checkUpdate: config.checkUpdate !== false,
     updateCheckIntervalMs: config.updateCheckIntervalMs ?? 21600000,
+    updateCommand: typeof config.updateCommand === 'string' && config.updateCommand.trim() !== ''
+      ? config.updateCommand.trim()
+      : 'dsh plugin --profile web update deepseek-harness-usage-dashboard',
   }
 
   // ---- userToken 持久化($DSH_HOME/storages/dsh-usage-dashboard.secret, 0600) ----
@@ -690,6 +695,7 @@ export function apply(ctx, config) {
         historyMonths: runtimeConfig.historyMonths,
         taskRefreshCooldownMs: runtimeConfig.taskRefreshCooldownMs,
         peakWindows: [...runtimeConfig.peakWindows],
+        updateCommand: runtimeConfig.updateCommand,
         tokenMasked: maskToken(token),
       },
       official: { ...official, payload: official.payload },

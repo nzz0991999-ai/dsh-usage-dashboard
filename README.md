@@ -37,6 +37,7 @@ DeepSeek 平台用量仪表盘插件:在 DeepSeek Harness Web UI 右下角挂一
 - **用量热力图**(GitHub 风格,默认收起):点击「用量热力图」标题行展开;近 `historyMonths` 个月(默认 6)的每日金额/Token,颜色越深用量越高;悬停单格即时浮卡显示当日金额、Token、请求数与命中率,无用量日提示"该日无用量"。展开状态记在浏览器本地
 - **模型分布环形图**:支持 **日 / 周 / 月** 三种周期并可 **‹ › 左右翻看**、按金额/按 Token 两个排序维度;图例**同时显示两个维度**(主值跟随排序维度,另一维度以同排小字常显);中心显示周期总量;小额模型自动合并为灰色"其他"(份额 ≥1.5% 且前 8 名单独显示)
 - **峰谷时段横幅**:面板顶部统一风格横幅(峰橙红 / 谷绿,右侧紧凑倒计时),提示当前计费时段与建议(默认峰时 `09:00–12:00`、`14:00–18:00` 北京时间,其余谷时约 5 折;窗口用 `peakWindows` 配置)
+- **面板内升级提示**:检测到 npm 上有新版本时,页脚版本号变成可点击徽标(显示 `当前版本 → 可用版本`),一键复制升级命令(命令由 `updateCommand` 配置);不自动安装,升级后需重启 `dsh web`
 - **中英双语 + 面板语言开关**:设置里可选「跟随界面 / 中文 / English」,默认跟随 Harness 界面语言;显式选择只影响本面板并记在浏览器本地(非中英语言按 fallback 链回退英文)
 - **userToken 管理面板**:一次性粘贴平台登录态,保存在宿主端 `$DSH_HOME/storages/dsh-usage-dashboard.secret`(0600 权限),浏览器只会拿到脱敏值;支持验证、清除、环境变量 `DEEPSEEK_PLATFORM_TOKEN` 兜底
 
@@ -261,6 +262,7 @@ dsh plugin --profile web add deepseek-harness-usage-dashboard@1.1.1
     peakWindows: [09:00-12:00, 14:00-18:00]   # 峰时窗口(HH:MM-HH:MM, 北京时间)
     checkUpdate: true               # 是否检查 npm 新版本(仅提示, 不自动安装)
     updateCheckIntervalMs: 21600000 # 检查新版本的频率(ms), 默认 6 小时
+    updateCommand: dsh plugin --profile web update deepseek-harness-usage-dashboard  # 页脚徽标一键复制的升级命令
 ```
 
 ## 卸载

@@ -37,6 +37,7 @@ The hero preview is above; here are close-ups of individual features:
 - **Usage heatmap** (GitHub style, collapsed by default): click the “Usage heatmap” heading to expand; daily amount/tokens over the last `historyMonths` months (default 6), darker = higher; hovering a cell pops a live tooltip card with that day's amount, tokens, requests and cache-hit rate (days without usage say “no usage this day”). The expanded state is remembered in the browser
 - **Model donut**: grouped by **day / week / month**, browsable with **‹ ›** between periods, and sorted **by amount / by tokens**; the legend shows **both dimensions at once** (the primary value follows the sort dimension, the other rides along as small text on the same row); the center shows the period total; small models are folded into a gray “Other” (a model is listed individually when its share is ≥1.5% and within the top 8)
 - **Peak/valley banner**: a unified banner at the top of the panel (amber peak / green valley with a compact countdown pill) giving live guidance; default peak windows `09:00–12:00` / `14:00–18:00` Beijing time, other hours are valley at ~50% off; windows configurable via `peakWindows`
+- **In-panel update hint**: when npm has a newer version the footer version becomes a clickable badge (showing `current → available`) that copies the upgrade command (configured via `updateCommand`); it never auto-installs, and a `dsh web` restart is required afterwards
 - **Chinese/English + in-panel language switch**: Settings offers “Follow interface / 中文 / English”; the default follows the Harness language, an explicit choice affects this panel only and is stored in the browser (other languages fall back to English through the locale fallback chain)
 - **userToken panel**: paste once, online validation, one-click clear, masked display
 
@@ -261,6 +262,7 @@ Write into `$DSH_HOME/profiles/web/cordis.patch.yml`:
     peakWindows: [09:00-12:00, 14:00-18:00]   # peak windows (HH:MM-HH:MM, Beijing time)
     checkUpdate: true               # check npm for a newer version (hint only, never auto-installs)
     updateCheckIntervalMs: 21600000 # how often to check for updates (ms), default 6 h
+    updateCommand: dsh plugin --profile web update deepseek-harness-usage-dashboard  # command copied by the footer badge
 ```
 
 ## Uninstall

@@ -8,6 +8,7 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 
 | Version | Focus |
 |---|---|
+| `1.2.1` | In-panel one-click update hint: the footer version becomes a clickable badge that copies the upgrade command; new `updateCommand` config |
 | `1.2.0` | Today-usage fix (the official usage page's own `by_api_key` endpoints, bucketed by the configured timezone, so “today” is no longer zero), `timezoneOffsetSec` config, in-panel language switch, heatmap collapsed by default, model legend showing amount and tokens together, English translation gaps closed and copy reworded, amounts following the account currency, footer version fixed |
 | `1.1.1` | In-panel update hint (queries npm latest, hint only), fixed invisible dark-mode button text, clarified the userToken onboarding text |
 | `1.1.0` | Major UI overhaul: usage heatmap, model donut (day/week/month + period browsing), 3×2 metric grid, peak/valley glow, outside-click close & fade animations, and “cost” → “amount” wording |
@@ -16,6 +17,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 | `1.0.0` | Declared the stable release and clarified DeepSeek-only billing scope |
 | `0.1.0` | First feature release with the balance pill, usage panel, token management, and refresh strategy |
 
+## [1.2.1] - 2026-09-11
+
+### Added
+
+- **In-panel one-click update hint**: the “new version” notice used to live only inside the settings dialog, so it was invisible unless you opened settings. The footer version now turns into a **clickable badge** when a newer version exists (showing `current → available`, amber); clicking it **copies** the upgrade command — clipboard only, it runs nothing and touches no local file. A successful copy turns the badge green (“✓ Upgrade command copied”); if copying fails it tells you to copy it from Settings instead (falling back to `execCommand` when the Clipboard API is unavailable)
+- **`updateCommand` config** (default `dsh plugin --profile web update deepseek-harness-usage-dashboard`): both the badge and the settings hint read it, so a different profile name or multi-environment setup needs one edit instead of two hardcoded copies
+
+### Notes
+
+- The badge only appears when npm has a newer version (`update.hasNewer`); otherwise the footer stays plain `v1.2.0` — zero noise
+
+- This is “notify + copy the command”, **not an auto-installer**: the upgrade still runs in your terminal, and a `dsh web` restart is required for it to take effect
 ## [1.2.0] - 2026-09-11
 
 ### Fixed
@@ -34,7 +47,6 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 - **In-panel language switch**: Settings now offers a “Panel language” row — “Follow interface / 中文 / English”. The default follows the Harness UI language (the host `t` seat passes straight through); an explicit choice affects this panel only and is stored in the browser's localStorage (survives reloads and restarts). Because `register(ns, { zh, en })` requires both shipped dictionaries, a non-zh/en language (say a future third-party Japanese pack) resolves through the locale fallback chain to English instead of showing raw keys; an invalid or unsupported stored value falls back to “Follow interface”
 - **Heatmap collapsed by default**: the panel is ~120 px shorter by default; click the “Usage heatmap” heading to expand or collapse, and the state is remembered in browser-local preferences. The donut's “month” browsing still reuses the same monthly payloads, so the number of API calls is unchanged
 - **`timezoneOffsetSec` config** (default `28800` = GMT+8): controls day bucketing and the request `start`/`end` alignment; must be a multiple of 900 within `[-43200, 50400]`, otherwise it falls back to GMT+8
-
 ### Changed
 
 - **The model-donut legend now shows amount and tokens together**: the primary value still follows the sort dimension (large and bold) while the other dimension rides along as small same-row text (hovering explains it as “Amount: x / Tokens: x”); the “amount / tokens” switch was renamed to “By amount / By tokens” to make its sorting semantics explicit. Models with zero amount but non-zero tokens are no longer filtered out — they show ¥0.00 plus their tokens
@@ -49,7 +61,6 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/) and [Sem
 - Dead code removed: 9 locale keys left over from older versions with no remaining reference (`chart.empty`, `chart.axisToken`, `pv.peak.short`, `pv.valley.short`, `pv.banner.peak.count`, `pv.banner.valley.count`, `chip.requests`, `chip.cacheHit`, `pill.balance`) plus the never-called `durationText()` helper and its 4 dedicated keys (`pv.dur.hm/h/m/now`) and the host's unreachable `runtimeToken` branch (`source: 'runtime'`, leaving token sources as `env → secret-file → none`); each dictionary now holds 90 keys
 - One request per month still covers the whole month (month length ≤ 31 days, exactly the platform's maximum query range); request count, polling and refresh cadence are unchanged
 - `?force=1` already bypasses the host's 10-minute cache (the panel ↻ button and opening the panel send it); if the last refresh happened before local midnight, a zero can still show briefly for one poll cycle, which is normal cache latency
-
 ## [1.1.1] - 2026-09-08
 
 ### Added

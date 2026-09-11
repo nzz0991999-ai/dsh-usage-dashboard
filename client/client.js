@@ -78,7 +78,11 @@ window.__ModuleLoader__.load({
 				".dshud_footer{display:flex;flex-direction:column;gap:2px;padding:8px 14px;border-top:1px solid var(--dsw-alias-border-l3,rgba(128,128,128,0.12));font-size:10.5px;color:var(--dsw-alias-label-tertiary)}",
 				".dshud_footer_row{display:flex;align-items:center;justify-content:space-between;gap:8px}",
 				".dshud_footer_ver{font-size:10px;color:var(--dsw-alias-label-tertiary);flex-shrink:0;opacity:.85;font-variant-numeric:tabular-nums}",
-				".dshud_footer_src{display:inline-flex;align-items:center;gap:2px}",
+				".dshud_ver_badge{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:999px;border:1px solid rgba(245,158,11,.5);background:rgba(245,158,11,.12);color:var(--dsw-alias-state-warn-primary,#f59e0b);font-size:10px;font-weight:600;font-family:inherit;cursor:pointer;flex-shrink:0;font-variant-numeric:tabular-nums;transition:background-color .15s ease}",
+				".dshud_ver_badge:hover{background:rgba(245,158,11,.22)}",
+				".dshud_ver_badge_ok{border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.14);color:var(--dsw-alias-state-success-primary,#10b981)}",
+				".dshud_ver_badge_err{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.12);color:#ef4444}",
+				".dshud_footer_src{display:inline-flex;align-items:center;gap:2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
 				".dshud_footer_src .dshud_link{font-size:10.5px;text-decoration:underline}",
 				".dshud_footer_src .dshud_link:hover{text-decoration:underline}",
 				".dshud_err{color:#ef4444}",
@@ -285,6 +289,8 @@ window.__ModuleLoader__.load({
 			saveMessage: null,
 			lang: storedLang === "zh" || storedLang === "en" ? storedLang : "auto",
 			hmOpen: readPref(PREF_HM_OPEN) === "1",
+			updateCopied: false,
+			updateCopyFailed: false,
 		};
 		const listeners = new Set();
 		let timer = null;
@@ -425,6 +431,30 @@ window.__ModuleLoader__.load({
 				writePref(PREF_HM_OPEN, next ? "1" : "0");
 				set({ hmOpen: next });
 			},
+			/** 升级徽标: 一键把升级命令写入剪贴板(不执行任何命令, 也不改动本机文件)。 */
+			async copyUpdateCommand() {
+				const cmd = snapshot.payload?.config?.updateCommand || "dsh plugin --profile web update deepseek-harness-usage-dashboard";
+				let ok = false;
+				try {
+					if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(cmd); ok = true; }
+				} catch { ok = false; }
+				if (!ok) {
+					// 兜底: 非安全上下文或权限被拒时, 用临时 textarea + execCommand
+					try {
+						const ta = document.createElement("textarea");
+						ta.value = cmd;
+						ta.setAttribute("readonly", "");
+						ta.style.position = "fixed";
+						ta.style.top = "-1000px";
+						document.body.appendChild(ta);
+						ta.select();
+						ok = document.execCommand("copy");
+						document.body.removeChild(ta);
+					} catch { ok = false; }
+				}
+				set({ updateCopied: ok, updateCopyFailed: !ok });
+				if (ok) setTimeout(() => { if (snapshot.updateCopied) set({ updateCopied: false }); }, 2500);
+			},
 			openSettings() { set({ settingsOpen: true, saveMessage: null }); },
 			closeSettings() { set({ settingsOpen: false }); },
 			async saveToken(token, t) {
@@ -495,6 +525,10 @@ window.__ModuleLoader__.load({
 			"footer.source": "数据来源: ",
 			"footer.platform": "DeepSeek 开放平台 · 官方",
 			"footer.version": "v{version}",
+			"footer.update.badge": "v{current} → v{latest}",
+			"footer.update.copy": "点击复制升级命令",
+			"footer.update.copied": "✓ 已复制升级命令",
+			"footer.update.copyFailed": "复制失败",
 			"footer.errSummary": "平台用量接口异常: {error}",
 			"footer.errOfficial": "官方余额接口异常: {error}",
 			"settings.title": "用量仪表盘设置",
@@ -510,7 +544,7 @@ window.__ModuleLoader__.load({
 			"settings.interval.save": "保存间隔设置",
 			"settings.interval.saved": "✓ 已保存",
 			"settings.update.label": "版本更新",
-			"settings.update.hint": "发现新版本 v{latest}(当前 v{current})。在 Harness 所在终端运行 dsh plugin --profile web update deepseek-harness-usage-dashboard 即可升级。",
+			"settings.update.hint": "发现新版本 v{latest}(当前 v{current})。在 Harness 所在终端运行 {cmd} 即可升级。",
 			"settings.status.hasToken": "已配置 token(来源: {source})",
 			"settings.status.noToken": "未配置 token",
 			"settings.source.env": "环境变量 DEEPSEEK_PLATFORM_TOKEN",
@@ -587,6 +621,10 @@ window.__ModuleLoader__.load({
 			"footer.source": "Data source: ",
 			"footer.platform": "DeepSeek Platform · Official",
 			"footer.version": "v{version}",
+			"footer.update.badge": "v{current} → v{latest}",
+			"footer.update.copy": "Click to copy the upgrade command",
+			"footer.update.copied": "✓ Upgrade command copied",
+			"footer.update.copyFailed": "Copy failed",
 			"footer.errSummary": "Platform usage API error: {error}",
 			"footer.errOfficial": "Official balance API error: {error}",
 			"settings.title": "Usage Dashboard Settings",
@@ -602,7 +640,7 @@ window.__ModuleLoader__.load({
 			"settings.interval.save": "Save interval",
 			"settings.interval.saved": "✓ Saved",
 			"settings.update.label": "Update available",
-			"settings.update.hint": "A new version v{latest} is available (current v{current}). Upgrade by running dsh plugin --profile web update deepseek-harness-usage-dashboard in the Harness terminal.",
+			"settings.update.hint": "A new version v{latest} is available (current v{current}). Upgrade by running {cmd} in the Harness terminal.",
 			"settings.status.hasToken": "Token configured (source: {source})",
 			"settings.status.noToken": "No token configured",
 			"settings.source.env": "DEEPSEEK_PLATFORM_TOKEN env var",
@@ -1263,7 +1301,19 @@ window.__ModuleLoader__.load({
 						rel: "noreferrer",
 					}, t("footer.platform")),
 				]),
-				react.createElement("span", { className: "dshud_footer_ver", key: "ver" }, t("footer.version", { version: payload?.update?.currentVersion || "—" })),
+				payload?.update?.hasNewer === true
+					? react.createElement("button", {
+						className: "dshud_ver_badge" + (snap.updateCopied ? " dshud_ver_badge_ok" : "") + (snap.updateCopyFailed ? " dshud_ver_badge_err" : ""),
+						key: "ver",
+						onClick: () => store.copyUpdateCommand(),
+						title: (snap.updateCopyFailed ? t("footer.update.copyFailed") + " · " : t("footer.update.copy")) + (payload.config?.updateCommand ? " · " + payload.config.updateCommand : ""),
+						"aria-label": t("footer.update.copy"),
+					}, snap.updateCopied
+						? t("footer.update.copied")
+						: (snap.updateCopyFailed
+							? t("footer.update.copyFailed")
+							: t("footer.update.badge", { current: payload.update.currentVersion ?? "?", latest: payload.update.latestVersion ?? "?" })))
+					: react.createElement("span", { className: "dshud_footer_ver", key: "ver" }, t("footer.version", { version: payload?.update?.currentVersion || "—" })),
 			]));
 			if (payload?.official?.state === "error") {
 				footerItems.push(react.createElement("span", { className: "dshud_err", key: "oe" }, t("footer.errOfficial", { error: payload.official.error ?? "" })));
@@ -1377,7 +1427,7 @@ window.__ModuleLoader__.load({
 						]),
 						payload.update?.hasNewer ? react.createElement("div", { className: "dshud_field", key: "update" }, [
 							react.createElement("span", { className: "dshud_field_label" }, t("settings.update.label")),
-							react.createElement("span", { className: "dshud_field_hint" }, t("settings.update.hint", { latest: payload.update.latestVersion ?? "?", current: payload.update.currentVersion ?? "?" })),
+							react.createElement("span", { className: "dshud_field_hint" }, t("settings.update.hint", { latest: payload.update.latestVersion ?? "?", current: payload.update.currentVersion ?? "?", cmd: cfg.updateCommand ?? "" })),
 						]) : null,
 						snap.saveMessage ? react.createElement("div", {
 							className: "dshud_msg " + (snap.saveMessage.ok ? "dshud_msg_ok" : "dshud_msg_err"),
